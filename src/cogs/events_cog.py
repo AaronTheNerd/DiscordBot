@@ -12,10 +12,10 @@ class EventsCog(commands.Cog, name="Events"):
         print(f"Logged in as: {self.bot.user}")
 
     @commands.Cog.listener()
-    async def on_member_join(self, member):
+    async def on_member_join(self, ctx):
         if ROLE_ON_JOIN_CONFIGS["enabled"]:
-            role = discord.utils.get(member.guild.roles, name=ROLE_ON_JOIN_CONFIGS["role"])
-            await member.add_roles(role)
+            role = discord.utils.get(ctx.guild.roles, name=ROLE_ON_JOIN_CONFIGS["role"])
+            await ctx.add_roles(role)
 
     @commands.Cog.listener()
     async def on_command(self, ctx):

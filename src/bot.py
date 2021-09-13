@@ -8,9 +8,9 @@ from discord.ext import commands
 
 from config import DISCORD_CONFIGS, MISC_COG_CONFIGS, SPOTIFY_COG_CONFIGS, EVENTS_COG_CONFIGS
 
-from misc_cog import MiscCog
-from spotify_cog import SpotifyCog
-from events_cog import EventsCog
+from cogs.misc_cog import MiscCog
+from cogs.spotify_cog import SpotifyCog
+from cogs.events_cog import EventsCog
 
 bot = commands.Bot(command_prefix=DISCORD_CONFIGS["command_prefix"])
 
