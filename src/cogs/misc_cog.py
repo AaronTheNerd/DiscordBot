@@ -11,4 +11,9 @@ class MiscCog(commands.Cog, name="Miscellaneous"):
 
     @commands.command(name='fact', aliases=['randfact', 'rf'])
     async def _fact(self, ctx):
+        """Gives a random fact."""
         await ctx.send(f"Did you know?\n{randfacts.get_fact()}")
+
+    @commands.command(name='logout')
+    async def _logout(self, ctx):
+        await self.bot.close()
