@@ -7,6 +7,10 @@ name = "pypi"
 "discord.py" = {extras = ["voice"], version = "*"}
 randfacts = "*"
 youtube-dl = "*"
+async-timeout = "*"
+httpx = "*"
+beautifulsoup4 = "*"
+pynacl = "*"
 
 [dev-packages]
 
