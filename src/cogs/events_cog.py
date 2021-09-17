@@ -20,5 +20,5 @@ class EventsCog(commands.Cog, name="Events"):
     @commands.Cog.listener()
     async def on_command(self, ctx):
         if RANDOM_INSULT_CONFIGS['enabled'] and random.random() < RANDOM_INSULT_CONFIGS["insult_chance"]:
-            insult = f'You\'re a {(random.choice(RANDOM_INSULT_CONFIGS["adjectives"]) + ", ") if random.random() < RANDOM_INSULT_CONFIGS["adjective_chance"] else ""} {random.choice(RANDOM_INSULT_CONFIGS["insults"])}'
+            insult = f'You\'re a {(random.choice(RANDOM_INSULT_CONFIGS["adjectives"]) + ", ") if random.random() < RANDOM_INSULT_CONFIGS["adjective_chance"] else ""}{random.choice(RANDOM_INSULT_CONFIGS["insults"])}'
             await ctx.send(insult, delete_after=RANDOM_INSULT_CONFIGS["delete_after"])
