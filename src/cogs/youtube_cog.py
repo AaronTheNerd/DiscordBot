@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
+================================================================================
 Copyright (c) 2019 Valentin B.
 https://gist.github.com/vbe0201/ade9b80f2d3b64643d854938d40a0a2d
 
@@ -15,6 +16,16 @@ Python 3.5+
 pip install -U discord.py pynacl youtube-dl
 
 You also need FFmpeg in your PATH environment variable or the FFmpeg.exe binary in your bot's directory on Windows.
+================================================================================
+Modified by Aaron Barge 2021
+
+Requirements:
+
+Python installation with access to pip, then simply run
+`make setup-venv`
+to install pipenv and all the requirements for the project
+
+================================================================================
 """
 
 import asyncio
@@ -144,12 +155,12 @@ class Song:
 
     def create_embed(self):
         embed = (discord.Embed(title='Now playing',
-                               description='```css\n{0.source.title}\n```'.format(self),
+                               description=f'```css\n{self.source.title}\n```',
                                color=discord.Color.blurple())
                 .add_field(name='Duration', value=self.source.duration)
                 .add_field(name='Requested by', value=self.requester.mention)
-                .add_field(name='Uploader', value='[{0.source.uploader}]({0.source.uploader_url})'.format(self))
-                .add_field(name='URL', value='[Click]({0.source.url})'.format(self))
+                .add_field(name='Uploader', value=f'[{self.source.uploader}]({self.source.uploader_url})')
+                .add_field(name='URL', value=f'[Click]({self.source.url})')
                 .set_thumbnail(url=self.source.thumbnail))
         return embed
 
@@ -293,16 +304,6 @@ class Music(commands.Cog):
         await ctx.voice_state.stop()
         del self.voice_states[ctx.guild.id]
 
-    @commands.command(name='volume')
-    async def _volume(self, ctx: commands.Context, *, volume: int):
-        """Sets the volume of the player."""
-        if not ctx.voice_state.is_playing:
-            return await ctx.send('Nothing being played at the moment.')
-        if 0 > volume > 100:
-            return await ctx.send('Volume must be between 0 and 100')
-        ctx.voice_state.volume = volume / 100
-        await ctx.send(f'Volume of the player set to {volume}%')
-
     @commands.command(name='nowplaying', aliases=['np'])
     async def _now(self, ctx: commands.Context):
         """Displays the currently playing song."""
@@ -348,7 +349,7 @@ class Music(commands.Cog):
                 await ctx.message.add_reaction('⏭')
                 ctx.voice_state.skip()
             else:
-                await ctx.send('Skip vote added, currently at **{}/3**'.format(total_votes))
+                await ctx.send(f'Skip vote added, currently at **{total_votes}/3**')
         else:
             await ctx.send('You have already voted to skip this song.')
 
@@ -368,7 +369,7 @@ class Music(commands.Cog):
         for i, song in enumerate(ctx.voice_state.songs[start:end], start=start):
             queue += f'`{i + 1}.` [**{song.source.title}**]({song.source.url})\n'
         embed = (discord.Embed(description=f'**{len(ctx.voice_state.songs)} tracks:**\n\n{queue}')
-                 .set_footer(text='Viewing page {}/{}'.format(page, pages)))
+                 .set_footer(text=f'Viewing page {page}/{pages}'))
         await ctx.send(embed=embed)
 
     @commands.command(name='shuffle', aliases=['random'])
