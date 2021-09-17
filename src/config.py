@@ -9,6 +9,7 @@ def _get_configs():
 CONFIGS = _get_configs()
 DISCORD_CONFIGS = CONFIGS["discord"]
 COG_CONFIGS = DISCORD_CONFIGS["cogs"]
+DND_COG_CONFIGS = COG_CONFIGS["dnd"]
 EVENTS_COG_CONFIGS = COG_CONFIGS["events"]
 ROLE_ON_JOIN_CONFIGS = EVENTS_COG_CONFIGS["role_on_join"]
 RANDOM_INSULT_CONFIGS = EVENTS_COG_CONFIGS["random_insult_on_command"]

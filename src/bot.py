@@ -16,8 +16,9 @@ Permission Integer: 36718656
 
 from discord.ext import commands
 
-from config import DISCORD_CONFIGS, MISC_COG_CONFIGS, SPOTIFY_COG_CONFIGS, EVENTS_COG_CONFIGS, YOUTUBE_COG_CONFIGS
+from config import DISCORD_CONFIGS, MISC_COG_CONFIGS, SPOTIFY_COG_CONFIGS, EVENTS_COG_CONFIGS, YOUTUBE_COG_CONFIGS, DND_COG_CONFIGS
 
+from cogs.dnd_cog import DnDCog
 from cogs.events_cog import EventsCog
 from cogs.misc_cog import MiscCog
 from cogs.spotify_cog import SpotifyCog
@@ -36,6 +37,9 @@ if EVENTS_COG_CONFIGS["enabled"]:
 
 if YOUTUBE_COG_CONFIGS["enabled"]:
     bot.add_cog(Music(bot))
+
+if DND_COG_CONFIGS["enabled"]:
+    bot.add_cog(DnDCog())
 
 if __name__ == "__main__":
     bot.run(DISCORD_CONFIGS["token"])
