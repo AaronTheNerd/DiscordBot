@@ -14,6 +14,5 @@ class MiscCog(commands.Cog, name="Miscellaneous"):
         """Gives a random fact."""
         await ctx.send(f"Did you know?\n{randfacts.get_fact()}")
 
-    @commands.command(name='logout')
-    async def _logout(self, ctx):
-        await self.bot.close()
+    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
+        await ctx.send(f'An error occurred: {str(error)}')
