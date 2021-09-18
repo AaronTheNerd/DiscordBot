@@ -13,7 +13,7 @@ class DnDCog(commands.Cog, name="DnD"):
         for i in range(num_of_rolls):
             rolls.append(random.randint(1, num_of_sides))
         rolls_str = f"Rolls: {str(rolls)}"
-        if len(rolls_str) < 2000:
+        if len(rolls_str) < 2000 and num_of_rolls != 1:
             await ctx.send(rolls_str)
         await ctx.send(f"{'Total' if num_of_rolls != 1 else 'Rolled'}: {sum(rolls)}")
 
