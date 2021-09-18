@@ -39,6 +39,8 @@ import youtube_dl
 from async_timeout import timeout
 from discord.ext import commands
 
+
+from config import VOTESKIP_CONFIGS
 # Silence useless bug reports messages
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -223,7 +225,7 @@ class VoiceState:
 
     @property
     def is_playing(self):
-        return self.voice and self.current
+        return self.voice is not None and self.current is not None
 
     async def audio_player_task(self):
         while True:
@@ -312,7 +314,7 @@ class Music(commands.Cog):
     @commands.command(name='pause', aliases=['stop'])
     async def _pause(self, ctx: commands.Context):
         """Pauses the currently playing song."""
-        if not ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
+        if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
             ctx.voice_state.voice.pause()
             await ctx.message.add_reaction('⏯')
 
@@ -332,9 +334,19 @@ class Music(commands.Cog):
             await ctx.message.add_reaction('⏹')
 
     @commands.command(name='skip', aliases=['next', 's'])
+    @commands.has_permissions(administrator=True)
     async def _skip(self, ctx: commands.Context):
-        """Vote to skip a song. The requester can automatically skip.
-        3 skip votes are needed for the song to be skipped.
+        """Skips a song without vote."""
+        if not ctx.voice_state.is_playing:
+            return await ctx.send('Not playing any music right now...')
+        await ctx.message.add_reaction('⏭')
+        ctx.voice_state.skip()
+
+    @commands.command(name='voteskip', aliases=['vs'])
+    async def _voteskip(self, ctx: commands.Context):
+        """Vote to skip a song. 
+        
+        The requestor can skip the current song without a vote.
         """
         if not ctx.voice_state.is_playing:
             return await ctx.send('Not playing any music right now...')
@@ -345,11 +357,16 @@ class Music(commands.Cog):
         elif voter.id not in ctx.voice_state.skip_votes:
             ctx.voice_state.skip_votes.add(voter.id)
             total_votes = len(ctx.voice_state.skip_votes)
-            if total_votes >= 3:
+            members_in_channel = ctx.voice_state.voice.channel.members
+            if VOTESKIP_CONFIGS["include_idle"]:
+                votes_needed = VOTESKIP_CONFIGS["fraction"] * members_in_channel
+            else:
+                votes_needed = VOTESKIP_CONFIGS["fraction"] * [ member for member in members_in_channel if member.status != 'idle' ]
+            if total_votes >= votes_needed:
                 await ctx.message.add_reaction('⏭')
                 ctx.voice_state.skip()
             else:
-                await ctx.send(f'Skip vote added, currently at **{total_votes}/3**')
+                await ctx.send(f'Skip vote added, currently at **{total_votes}/{votes_needed}**')
         else:
             await ctx.send('You have already voted to skip this song.')
 
