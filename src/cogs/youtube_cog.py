@@ -25,6 +25,15 @@ Python installation with access to pip, then simply run
 `make setup-venv`
 to install pipenv and all the requirements for the project
 
+Additions from Original:
+- Added a loopqueue command
+- Fixed Resume and Pause functionality
+- Modified the nowplaying embed to show whether the current song will loop or 
+  if the queue will loop
+- Added the ability to queue up playlists
+- Made vote skip a variable amount
+- Added a force skip for administators
+- Removed volume command
 ================================================================================
 """
 
@@ -37,10 +46,9 @@ import random
 import discord
 import youtube_dl
 from async_timeout import timeout
+from config import VOTESKIP_CONFIGS
 from discord.ext import commands
 
-
-from config import VOTESKIP_CONFIGS
 # Silence useless bug reports messages
 youtube_dl.utils.bug_reports_message = lambda: ''
 
@@ -88,7 +96,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
         self.title = data.get('title')
         self.thumbnail = data.get('thumbnail')
         self.description = data.get('description')
-        self.duration = self.parse_duration(int(data.get('duration')))
+        self.duration = int(data.get('duration'))
+        self.duration_str = self.parse_duration(int(data.get('duration')))
         self.tags = data.get('tags')
         self.url = data.get('webpage_url')
         self.views = data.get('view_count')
@@ -132,6 +141,41 @@ class YTDLSource(discord.PCMVolumeTransformer):
                     raise YTDLError(f'Couldn\'t retrieve any matches for `{webpage_url}`')
         return cls(ctx, discord.FFmpegPCMAudio(info['url'], **cls.FFMPEG_OPTIONS), data=info)
 
+    @classmethod
+    async def create_source_playlist(cls, ctx: commands.Context, search: str, *, loop: asyncio.BaseEventLoop = None):
+        loop = loop or asyncio.get_event_loop()
+        partial = functools.partial(cls.ytdl.extract_info, search, download=False, process=False)
+        data = await loop.run_in_executor(None, partial)
+        if data is None:
+            raise YTDLError(f'Couldn\'t find anything that matches `{search}`')
+        if 'entries' not in data:
+            entries = [data]
+        else:
+            entries = []
+            for entry in data['entries']:
+                if entry:
+                    entries.append(entry)
+            if len(entries) == 0:
+                raise YTDLError(f'Couldn\'t find anything that matches `{search}`')
+        infos = []
+        for entry in entries:
+            webpage_url = f"https://www.youtube.com/watch?v={entry['url']}"
+            partial = functools.partial(cls.ytdl.extract_info, webpage_url, download=False)
+            processed_info = await loop.run_in_executor(None, partial)
+            if processed_info is None:
+                raise YTDLError(f'Couldn\'t fetch `{webpage_url}`')
+            if 'entries' not in processed_info:
+                infos.append(processed_info)
+            else:
+                info = None
+                while info is None:
+                    try:
+                        info = processed_info['entries'].pop(0)
+                    except IndexError:
+                        raise YTDLError(f'Couldn\'t retrieve any matches for `{webpage_url}`')
+                infos.append(info)
+        return [ cls(ctx, discord.FFmpegPCMAudio(info['url'], **cls.FFMPEG_OPTIONS), data=info) for info in infos ]
+
     @staticmethod
     def parse_duration(duration: int):
         minutes, seconds = divmod(duration, 60)
@@ -155,14 +199,16 @@ class Song:
         self.source = source
         self.requester = source.requester
 
-    def create_embed(self):
+    def create_embed(self, loop: bool = False, loopqueue: bool = False):
         embed = (discord.Embed(title='Now playing',
                                description=f'```css\n{self.source.title}\n```',
                                color=discord.Color.blurple())
-                .add_field(name='Duration', value=self.source.duration)
+                .add_field(name='Duration', value=self.source.duration_str)
                 .add_field(name='Requested by', value=self.requester.mention)
                 .add_field(name='Uploader', value=f'[{self.source.uploader}]({self.source.uploader_url})')
                 .add_field(name='URL', value=f'[Click]({self.source.url})')
+                .add_field(name="Loop", value=f'{"✅" if loop else "❌"}')
+                .add_field(name="Loop Queue", value=f'{"✅" if loopqueue else "❌"}')
                 .set_thumbnail(url=self.source.thumbnail))
         return embed
 
@@ -199,6 +245,7 @@ class VoiceState:
         self.songs = SongQueue()
 
         self._loop = False
+        self._loopqueue = False
         self._volume = 0.5
         self.skip_votes = set()
 
@@ -216,6 +263,14 @@ class VoiceState:
         self._loop = value
 
     @property
+    def loopqueue(self):
+        return self._loopqueue
+
+    @loopqueue.setter
+    def loopqueue(self, value: bool):
+        self._loopqueue = value
+
+    @property
     def volume(self):
         return self._volume
 
@@ -225,7 +280,7 @@ class VoiceState:
 
     @property
     def is_playing(self):
-        return self.voice is not None and self.current is not None
+        return self.voice and self.current
 
     async def audio_player_task(self):
         while True:
@@ -235,6 +290,8 @@ class VoiceState:
                 # If no song will be added to the queue in time,
                 # the player will disconnect due to performance
                 # reasons.
+                if self.loopqueue:
+                    await self.songs.put(self.current)
                 try:
                     async with timeout(180):  # 3 minutes
                         self.current = await self.songs.get()
@@ -243,7 +300,7 @@ class VoiceState:
                     return
             self.current.source.volume = self._volume
             self.voice.play(self.current.source, after=self.play_next_song)
-            await self.current.source.channel.send(embed=self.current.create_embed())
+            await self.current.source.channel.send(embed=self.now_playing_embed())
             await self.next.wait()
 
     def play_next_song(self, error=None):
@@ -261,6 +318,9 @@ class VoiceState:
         if self.voice:
             await self.voice.disconnect()
             self.voice = None
+
+    def now_playing_embed(self):
+        return self.current.create_embed(self._loop, self._loopqueue)
 
 class Music(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -309,7 +369,7 @@ class Music(commands.Cog):
     @commands.command(name='nowplaying', aliases=['np'])
     async def _now(self, ctx: commands.Context):
         """Displays the currently playing song."""
-        await ctx.send(embed=ctx.voice_state.current.create_embed())
+        await ctx.send(embed=ctx.voice_state.now_playing_embed())
 
     @commands.command(name='pause', aliases=['stop'])
     async def _pause(self, ctx: commands.Context):
@@ -321,7 +381,7 @@ class Music(commands.Cog):
     @commands.command(name='resume', aliases=['re', 'res', 'continue'])
     async def _resume(self, ctx: commands.Context):
         """Resumes a currently paused song."""
-        if not ctx.voice_state.is_playing and ctx.voice_state.voice.is_paused():
+        if ctx.voice_state.is_playing is not None and ctx.voice_state.voice.is_paused():
             ctx.voice_state.voice.resume()
             await ctx.message.add_reaction('⏯')
 
@@ -357,11 +417,10 @@ class Music(commands.Cog):
         elif voter.id not in ctx.voice_state.skip_votes:
             ctx.voice_state.skip_votes.add(voter.id)
             total_votes = len(ctx.voice_state.skip_votes)
-            members_in_channel = ctx.voice_state.voice.channel.members
-            if VOTESKIP_CONFIGS["include_idle"]:
-                votes_needed = VOTESKIP_CONFIGS["fraction"] * members_in_channel
-            else:
-                votes_needed = VOTESKIP_CONFIGS["fraction"] * [ member for member in members_in_channel if member.status != 'idle' ]
+            members = ctx.voice_state.voice.channel.members
+            if VOTESKIP_CONFIGS["exclude_idle"]:
+                members = [ member for member in members if member.status != "idle" ]
+            votes_needed = VOTESKIP_CONFIGS["fraction"] * len(members)
             if total_votes >= votes_needed:
                 await ctx.message.add_reaction('⏭')
                 ctx.voice_state.skip()
@@ -414,6 +473,15 @@ class Music(commands.Cog):
         ctx.voice_state.loop = not ctx.voice_state.loop
         await ctx.message.add_reaction('✅')
 
+    @commands.command(name='loopqueue', aliases=['lq'])
+    async def _loopqueue(self, ctx: commands.Context):
+        """Toggle whether to loop the queue."""
+        if not ctx.voice_state.is_playing:
+            return await ctx.send('Nothing being played at the moment.')
+        # Inverse boolean value to loop and unloop.
+        ctx.voice_state.loopqueue = not ctx.voice_state.loopqueue
+        await ctx.message.add_reaction('✅')
+
     @commands.command(name='play', aliases=['p'])
     async def _play(self, ctx: commands.Context, *, search: str):
         """Plays a song.
@@ -435,6 +503,22 @@ class Music(commands.Cog):
                 song = Song(source)
                 await ctx.voice_state.songs.put(song)
                 await ctx.send(f'Enqueued {str(source)}')
+
+    @commands.command(name='playlist', aliases=['pl'])
+    async def _playlist(self, ctx: commands.Context, url: str):
+        """Queues a playlist, must use a URL."""
+        if not ctx.voice_state.voice:
+            await ctx.invoke(self._join)
+        async with ctx.typing():
+            try:
+                sources = await YTDLSource.create_source_playlist(ctx, url, loop=self.bot.loop)
+            except YTDLError as e:
+                await ctx.send(f'An error occurred while processing this request: {str(e)}')
+            else:
+                for source in sources:
+                    song = Song(source)
+                    await ctx.voice_state.songs.put(song)
+                await ctx.invoke(self._queue)
 
     @_join.before_invoke
     @_play.before_invoke
