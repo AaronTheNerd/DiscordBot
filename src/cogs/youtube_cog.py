@@ -280,7 +280,10 @@ class VoiceState:
 
     @property
     def is_playing(self):
-        return self.voice and self.current
+        return self.voice is not None and self.current is not None
+
+    async def get_new_current(self):
+        self.current = await self.songs.get()
 
     async def audio_player_task(self):
         while True:
@@ -292,10 +295,11 @@ class VoiceState:
                 # reasons.
                 if self.loopqueue:
                     await self.songs.put(self.current)
+                self.current = None
                 try:
-                    async with timeout(180):  # 3 minutes
-                        self.current = await self.songs.get()
+                    await asyncio.wait_for(self.get_new_current(), 180)
                 except asyncio.TimeoutError:
+                    print("TIMEOUT")
                     self.bot.loop.create_task(self.stop())
                     return
             self.current.source.volume = self._volume
@@ -315,7 +319,7 @@ class VoiceState:
 
     async def stop(self):
         self.songs.clear()
-        if self.voice:
+        if self.voice is not None:
             await self.voice.disconnect()
             self.voice = None
 
@@ -369,7 +373,10 @@ class Music(commands.Cog):
     @commands.command(name='nowplaying', aliases=['np'])
     async def _now(self, ctx: commands.Context):
         """Displays the currently playing song."""
-        await ctx.send(embed=ctx.voice_state.now_playing_embed())
+        if ctx.voice_state.current is not None:
+            await ctx.send(embed=ctx.voice_state.now_playing_embed())
+        else:
+            await ctx.send("Nothing playing at the moment.")
 
     @commands.command(name='pause', aliases=['stop'])
     async def _pause(self, ctx: commands.Context):
@@ -411,21 +418,25 @@ class Music(commands.Cog):
         if not ctx.voice_state.is_playing:
             return await ctx.send('Not playing any music right now...')
         voter = ctx.message.author
-        if voter == ctx.voice_state.current.requester:
+        if VOTESKIP_CONFIGS["requester_autoskip"] and voter == ctx.voice_state.current.requester:
             await ctx.message.add_reaction('⏭')
             ctx.voice_state.skip()
         elif voter.id not in ctx.voice_state.skip_votes:
             ctx.voice_state.skip_votes.add(voter.id)
             total_votes = len(ctx.voice_state.skip_votes)
-            members = ctx.voice_state.voice.channel.members
+            if ctx.author.voice is None:
+                ctx.send("You're not in a vc.")
+            members = ctx.author.voice.channel.members
+            #members = ctx.voice_state.voice.channel.members
+            print(f"MEMBERS {members}")
             if VOTESKIP_CONFIGS["exclude_idle"]:
                 members = [ member for member in members if member.status != "idle" ]
-            votes_needed = VOTESKIP_CONFIGS["fraction"] * len(members)
+            votes_needed = VOTESKIP_CONFIGS["fraction"] * float(len(members) - 1)
+            await ctx.send(f"Whose in vc: {str([member.name for member in members])}")
+            await ctx.send(f'Skip vote added, currently at **{total_votes}/{str(math.ceil(votes_needed))}**')
             if total_votes >= votes_needed:
                 await ctx.message.add_reaction('⏭')
                 ctx.voice_state.skip()
-            else:
-                await ctx.send(f'Skip vote added, currently at **{total_votes}/{votes_needed}**')
         else:
             await ctx.send('You have already voted to skip this song.')
 
