@@ -20,7 +20,7 @@ Permission Integer: 305155152
 
 from discord.ext import commands
 
-from config import DISCORD_CONFIGS, MISC_COG_CONFIGS, EVENTS_COG_CONFIGS, YOUTUBE_COG_CONFIGS, DND_COG_CONFIGS, PLANK_COG_CONFIGS
+from config import DISCORD_CONFIGS, MISC_COG_CONFIGS, EVENTS_COG_CONFIGS, YOUTUBE_COG_CONFIGS, DND_COG_CONFIGS
 
 from cogs.dnd_cog import DnDCog
 from cogs.events_cog import EventsCog

@@ -73,6 +73,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
         'no_warnings': True,
         'default_search': 'auto',
         'source_address': '0.0.0.0',
+        'username': 'discordchatbot69@gmail.com',
+        'password': '~<G>$)9H4yUS<8:}',
     }
 
     FFMPEG_OPTIONS = {
