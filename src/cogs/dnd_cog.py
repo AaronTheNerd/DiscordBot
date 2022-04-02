@@ -52,5 +52,19 @@ class DnDCog(commands.Cog, name="DnD"):
         """Rolls a 100-sided dice."""
         await ctx.invoke(self._roll, 100, num_of_rolls)
 
+    @commands.command(name="rolladv", aliases=["rolla", "rolladvantage", "ra"])
+    async def _rolladv(self, ctx, num_of_sides: int):
+        """Rolls with advantage."""
+        roll1, roll2 = random.randint(1, num_of_sides), random.randint(1, num_of_sides)
+        roll = roll1 if roll1 > roll2 else roll2
+        await ctx.send(f"Rolled with Advantage: {roll}")
+
+    @commands.command(name="rolldis", aliases=["rolld", "rolldisadvantage", "rd"])
+    async def _rolldis(self, ctx, num_of_sides: int):
+        """Rolls with disadvantage."""
+        roll1, roll2 = random.randint(1, num_of_sides), random.randint(1, num_of_sides)
+        roll = roll1 if roll1 < roll2 else roll2
+        await ctx.send(f"Rolled with Disadvantage: {roll}")
+
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
         await ctx.send(f'An error occurred: {str(error)}')
