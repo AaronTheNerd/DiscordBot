@@ -2,10 +2,7 @@ PY = python3.8
 PIP = pip
 VENV = pipenv
 
-.PHONY: connect run setup-venv shell clean
-
-connect:
-	ssh -i discord-bot.pem ubuntu@ec2-34-228-160-153.compute-1.amazonaws.com
+.PHONY: run setup-venv shell clean
 
 run:
 	$(VENV) run $(PY) src/bot.py
