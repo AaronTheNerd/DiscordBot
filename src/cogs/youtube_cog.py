@@ -46,8 +46,8 @@ import random
 import discord
 import youtube_dl
 from async_timeout import timeout
-from config import VOTESKIP_CONFIGS
 from discord.ext import commands
+from src.configs import CONFIGS
 
 # Silence useless bug reports messages
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -420,7 +420,10 @@ class Music(commands.Cog):
         if not ctx.voice_state.is_playing:
             return await ctx.send('Not playing any music right now...')
         voter = ctx.message.author
-        if VOTESKIP_CONFIGS["requester_autoskip"] and voter == ctx.voice_state.current.requester:
+        if (
+            CONFIGS.cogs["youtube"]["voteskip"]["requester_autoskip"]
+            and voter == ctx.voice_state.current.requester
+        ):
             await ctx.message.add_reaction('⏭')
             ctx.voice_state.skip()
         elif voter.id not in ctx.voice_state.skip_votes:
@@ -431,9 +434,9 @@ class Music(commands.Cog):
             members = ctx.author.voice.channel.members
             #members = ctx.voice_state.voice.channel.members
             print(f"MEMBERS {members}")
-            if VOTESKIP_CONFIGS["exclude_idle"]:
+            if CONFIGS.cogs["youtube"]["voteskip"]["exclude_idle"]:
                 members = [ member for member in members if member.status != "idle" ]
-            votes_needed = VOTESKIP_CONFIGS["fraction"] * float(len(members) - 1)
+            votes_needed = CONFIGS.cogs["youtube"]["voteskip"]["fraction"] * float(len(members) - 1)
             await ctx.send(f"Whose in vc: {str([member.name for member in members])}")
             await ctx.send(f'Skip vote added, currently at **{total_votes}/{str(math.ceil(votes_needed))}**')
             if total_votes >= votes_needed:
