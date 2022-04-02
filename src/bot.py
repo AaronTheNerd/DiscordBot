@@ -20,26 +20,28 @@ Permission Integer: 305155152
 
 from discord.ext import commands
 
-from config import DISCORD_CONFIGS, MISC_COG_CONFIGS, EVENTS_COG_CONFIGS, YOUTUBE_COG_CONFIGS, DND_COG_CONFIGS
+from src.configs import CONFIGS
 
 from cogs.dnd_cog import DnDCog
 from cogs.events_cog import EventsCog
 from cogs.misc_cog import MiscCog
 from cogs.youtube_cog import Music
 
-bot = commands.Bot(command_prefix=DISCORD_CONFIGS["command_prefix"], case_insensitive=DISCORD_CONFIGS["case_insensitive"])
+bot = commands.Bot(
+    command_prefix=CONFIGS.command_prefix,
+    case_insensitive=CONFIGS.case_insensitive
+)
 
-if MISC_COG_CONFIGS["enabled"]:
+if CONFIGS.cogs["misc"].enabled:
     bot.add_cog(MiscCog(bot))
 
-if EVENTS_COG_CONFIGS["enabled"]:
-    bot.add_cog(EventsCog(bot))
+bot.add_cog(EventsCog(bot))
 
-if YOUTUBE_COG_CONFIGS["enabled"]:
+if CONFIGS.cogs["youtube"].enabled:
     bot.add_cog(Music(bot))
 
-if DND_COG_CONFIGS["enabled"]:
+if CONFIGS.cogs["dnd"].enabled:
     bot.add_cog(DnDCog())
 
 if __name__ == "__main__":
-    bot.run(DISCORD_CONFIGS["token"])
+    bot.run(CONFIGS.token)
