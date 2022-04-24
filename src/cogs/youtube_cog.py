@@ -326,7 +326,7 @@ class VoiceState:
                     await self.songs.put(self.current)
                 self.current = None
                 try:
-                    await asyncio.wait_for(self.get_new_current(), 10)
+                    await asyncio.wait_for(self.get_new_current(), 60)
                 except asyncio.TimeoutError:
                     self.bot.loop.create_task(self.disconnect())
                     return

@@ -1,0 +1,5 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/aaronthenerd/Documents/Code/DiscordBot'
+pipenv run python3.8 src/bot.py
+make: Leaving directory '/home/aaronthenerd/Documents/Code/DiscordBot'
+ 
