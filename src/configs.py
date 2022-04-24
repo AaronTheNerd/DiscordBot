@@ -1,7 +1,7 @@
 import json
 import os
-from dataclasses import dataclass, field, InitVar
-from typing import Dict, Any
+from dataclasses import dataclass
+from typing import Dict
 
 
 class CogConfig:
@@ -22,23 +22,20 @@ class Configs:
     token: str
     command_prefix: str
     case_insensitive: bool
-    cogs: Dict[str, CogConfig] = field(init=False, default_factory=dict)
-    _raw_cogs: InitVar[Dict[str, Any]]
-
-    def __post_init__(self, _raw_cogs: Dict[str, Any]):
-        for key, val in _raw_cogs.items():
-            self.cogs[key] = CogConfig(**val)
+    cogs: Dict[str, CogConfig]
 
 
 def _get_configs():
     abs_path = os.path.abspath(os.path.dirname(__file__))
+    raw_json = {}
     with open(f"{abs_path}/../config.json") as configs:
         raw_json = json.load(configs)
-        raw_json["discord"]["_raw_cogs"] = raw_json["discord"].pop("cogs")
-        return raw_json
+    for key in raw_json["cogs"]:
+        raw_json["cogs"][key] = CogConfig(**raw_json["cogs"][key])
+    return Configs(**raw_json)
 
 
-CONFIGS = Configs(**(_get_configs()["discord"]))
+CONFIGS = _get_configs()
 
 
 if __name__ == "__main__":

@@ -2,11 +2,12 @@ import random
 
 from discord.ext import commands
 
+
 class DnDCog(commands.Cog, name="DnD"):
     def __init__(self):
         pass
 
-    @commands.command(name='roll')
+    @commands.command(name="roll")
     async def _roll(self, ctx, num_of_sides: int, num_of_rolls: int = 1):
         """Rolls a dice."""
         rolls = []
@@ -17,37 +18,37 @@ class DnDCog(commands.Cog, name="DnD"):
             await ctx.send(rolls_str)
         await ctx.send(f"{'Total' if num_of_rolls != 1 else 'Rolled'}: {sum(rolls)}")
 
-    @commands.command(name='d4')
+    @commands.command(name="d4")
     async def _d4(self, ctx, num_of_rolls: int = 1):
         """Rolls a 4-sided dice."""
         await ctx.invoke(self._roll, 4, num_of_rolls)
 
-    @commands.command(name='d6')
+    @commands.command(name="d6")
     async def _d6(self, ctx, num_of_rolls: int = 1):
         """Rolls a 6-sided dice."""
         await ctx.invoke(self._roll, 6, num_of_rolls)
 
-    @commands.command(name='d8')
+    @commands.command(name="d8")
     async def _d8(self, ctx, num_of_rolls: int = 1):
         """Rolls an 8-sided dice."""
         await ctx.invoke(self._roll, 8, num_of_rolls)
 
-    @commands.command(name='d10')
+    @commands.command(name="d10")
     async def _d10(self, ctx, num_of_rolls: int = 1):
         """Rolls a 10-sided dice."""
         await ctx.invoke(self._roll, 10, num_of_rolls)
 
-    @commands.command(name='d12')
+    @commands.command(name="d12")
     async def _d12(self, ctx, num_of_rolls: int = 1):
         """Rolls a 12-sided dice."""
         await ctx.invoke(self._roll, 12, num_of_rolls)
 
-    @commands.command(name='d20')
+    @commands.command(name="d20")
     async def _d20(self, ctx, num_of_rolls: int = 1):
         """Rolls a 20-sided dice."""
         await ctx.invoke(self._roll, 20, num_of_rolls)
 
-    @commands.command(name='d100')
+    @commands.command(name="d100")
     async def _d100(self, ctx, num_of_rolls: int = 1):
         """Rolls a 100-sided dice."""
         await ctx.invoke(self._roll, 100, num_of_rolls)
@@ -67,4 +68,4 @@ class DnDCog(commands.Cog, name="DnD"):
         await ctx.send(f"Rolled with Disadvantage: {roll}")
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
-        await ctx.send(f'An error occurred: {str(error)}')
+        await ctx.send(f"An error occurred: {str(error)}")

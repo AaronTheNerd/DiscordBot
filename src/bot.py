@@ -20,17 +20,14 @@ Permission Integer: 305155152
 
 from discord.ext import commands
 
-from src.configs import CONFIGS
+from configs import CONFIGS
 
 from cogs.dnd_cog import DnDCog
 from cogs.events_cog import EventsCog
 from cogs.misc_cog import MiscCog
 from cogs.youtube_cog import Music
 
-bot = commands.Bot(
-    command_prefix=CONFIGS.command_prefix,
-    case_insensitive=CONFIGS.case_insensitive
-)
+bot = commands.Bot(command_prefix=CONFIGS.command_prefix, case_insensitive=CONFIGS.case_insensitive)
 
 if CONFIGS.cogs["misc"].enabled:
     bot.add_cog(MiscCog(bot))
