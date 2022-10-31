@@ -1,20 +1,22 @@
 import json
 import os
-from dataclasses import dataclass
-from typing import Dict
+from dataclasses import dataclass, field, fields, is_dataclass
+from typing import Any, TypeVar, Dict, Type
 
 
+@dataclass(frozen=True)
 class CogConfig:
-    def __init__(self, **kwargs):
-        self.enabled = kwargs["enabled"]
-        self.configs = kwargs
-        del self.configs["enabled"]
+    enabled: bool
+    kwargs: Dict[str, Any] = field(default_factory=dict)
 
-    def __repr__(self):
-        return f"CogConfig(enabled={self.enabled}, configs=Dict[{self.configs}])"
 
-    def __getitem__(self, key):
-        return self.configs[key]
+@dataclass(frozen=True)
+class AvailableCogs:
+    dnd: CogConfig
+    role_on_join: CogConfig
+    random_insult_on_command: CogConfig
+    misc: CogConfig
+    youtube: CogConfig
 
 
 @dataclass(frozen=True)
@@ -22,20 +24,28 @@ class Configs:
     token: str
     command_prefix: str
     case_insensitive: bool
-    cogs: Dict[str, CogConfig]
+    cogs: AvailableCogs
 
 
-def _get_configs():
+T = TypeVar("T")
+
+
+def _replaceWithDataclass(raw_configs: Dict[str, Any], cls: Type[T]) -> T:
+    for field in fields(cls):
+        if is_dataclass(field.type):
+            raw_configs[field.name] = _replaceWithDataclass(raw_configs[field.name], field.type)
+    return cls(**raw_configs)
+
+
+def _getConfigs():
     abs_path = os.path.abspath(os.path.dirname(__file__))
     raw_json = {}
     with open(f"{abs_path}/../config.json") as configs:
         raw_json = json.load(configs)
-    for key in raw_json["cogs"]:
-        raw_json["cogs"][key] = CogConfig(**raw_json["cogs"][key])
-    return Configs(**raw_json)
+    return _replaceWithDataclass(raw_json, Configs)
 
 
-CONFIGS = _get_configs()
+CONFIGS = _getConfigs()
 
 
 if __name__ == "__main__":
