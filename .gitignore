@@ -2,3 +2,4 @@ discord-bot.pem
 config.json
 logs/
 __pycache__/
+.vscode/
