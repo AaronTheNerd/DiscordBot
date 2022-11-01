@@ -8,6 +8,7 @@ import requests
 class TrackResponse:
     album: Dict[str, Any]
     artists: List[Dict[str, Any]]
+    available_markets: List[str]
     disc_number: int
     duration_ms: int
     explicit: bool
