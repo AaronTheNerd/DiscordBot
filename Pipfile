@@ -9,7 +9,7 @@ youtube-dl = "*"
 httpx = "*"
 beautifulsoup4 = "*"
 pynacl = "*"
-"discord.py" = {version = "*", extras = ["voice"]}
+"discord.py" = {version = "==1.7.3", extras = ["voice"]}
 
 [dev-packages]
 
