@@ -4,13 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-"discord.py" = {extras = ["voice"], version = "*"}
 randfacts = "*"
 youtube-dl = "*"
-async-timeout = "*"
 httpx = "*"
 beautifulsoup4 = "*"
 pynacl = "*"
+"discord.py" = {version = "*", extras = ["voice"]}
 
 [dev-packages]
 
