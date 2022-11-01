@@ -45,9 +45,15 @@ class PlaylistResponse:
 
 
 class SpotifyAPI:
+    auth_url: str = "https://accounts.spotify.com/api/token"
     base_url: str = "https://api.spotify.com/v1"
 
-    def __init__(self, token: str = "") -> None:
+    def __init__(self, client_id: str, client_secret: str) -> None:
+        token = requests.post(self.auth_url, {
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret
+        }).json()["access_token"]
         self._headers = {"Authorization": f"Bearer {token}"}
 
     def get_track(self, id: str) -> TrackResponse:

@@ -19,11 +19,17 @@ class AvailableCogs:
 
 
 @dataclass(frozen=True)
+class SpotifyAuthConfigs:
+    username: str
+    password: str
+
+
+@dataclass(frozen=True)
 class Configs:
     token: str
     command_prefix: str
     case_insensitive: bool
-    spotify_token: str
+    spotify: SpotifyAuthConfigs
     cogs: AvailableCogs
 
 
