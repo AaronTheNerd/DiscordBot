@@ -12,6 +12,7 @@ class TrackResponse:
     disc_number: int
     duration_ms: int
     explicit: bool
+    external_ids: Any
     external_urls: Dict[str, Any]
     href: str
     id: str
