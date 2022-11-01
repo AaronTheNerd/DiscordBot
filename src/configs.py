@@ -24,6 +24,7 @@ class Configs:
     token: str
     command_prefix: str
     case_insensitive: bool
+    spotify_token: str
     cogs: AvailableCogs
 
 
