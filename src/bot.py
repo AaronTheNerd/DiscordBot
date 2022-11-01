@@ -20,25 +20,29 @@ Permission Integer: 305155152
 
 from discord.ext import commands
 
+from cogs.dnd import DnDCog
+from cogs.events import EventsCog
+from cogs.misc import MiscCog
+from cogs.youtube import Music
 from configs import CONFIGS
 
-from cogs.dnd_cog import DnDCog
-from cogs.events_cog import EventsCog
-from cogs.misc_cog import MiscCog
-from cogs.youtube_cog import Music
 
-bot = commands.Bot(command_prefix=CONFIGS.command_prefix, case_insensitive=CONFIGS.case_insensitive)
+def main():
 
-if CONFIGS.cogs["misc"].enabled:
-    bot.add_cog(MiscCog(bot))
+    bot = commands.Bot(command_prefix=CONFIGS.command_prefix, case_insensitive=CONFIGS.case_insensitive)
 
-bot.add_cog(EventsCog(bot))
+    if CONFIGS.cogs.misc.enabled:
+        bot.add_cog(MiscCog(bot, **CONFIGS.cogs.misc.kwargs))
 
-if CONFIGS.cogs["youtube"].enabled:
-    bot.add_cog(Music(bot))
+    bot.add_cog(EventsCog(bot))
 
-if CONFIGS.cogs["dnd"].enabled:
-    bot.add_cog(DnDCog())
+    if CONFIGS.cogs.youtube.enabled:
+        bot.add_cog(Music(bot, **CONFIGS.cogs.youtube.kwargs))
+
+    if CONFIGS.cogs.dnd.enabled:
+        bot.add_cog(DnDCog(**CONFIGS.cogs.dnd.kwargs))
+
+    bot.run(CONFIGS.token)
 
 if __name__ == "__main__":
-    bot.run(CONFIGS.token)
+    main()
