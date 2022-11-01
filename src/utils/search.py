@@ -43,7 +43,7 @@ class Search:
         elif parse_result.netloc == "open.spotify.com" or (
             parse_result.netloc == "" and parse_result.path[0] == "open.spotify.com"
         ):
-            api = SpotifyAPI(CONFIGS.spotify_token)
+            api = SpotifyAPI(CONFIGS.spotify.client_id, CONFIGS.spotify.client_secret)
             if path[1] == "track":
                 t_resp: TrackResponse = api.get_track(path[2])
                 self.searches = [f"{t_resp.name} by {t_resp.artists[0]['name']}"]
