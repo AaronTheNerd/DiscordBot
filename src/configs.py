@@ -13,8 +13,7 @@ class CogConfig:
 @dataclass(frozen=True)
 class AvailableCogs:
     dnd: CogConfig
-    role_on_join: CogConfig
-    random_insult_on_command: CogConfig
+    events: CogConfig
     misc: CogConfig
     youtube: CogConfig
 
