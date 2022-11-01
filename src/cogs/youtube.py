@@ -43,7 +43,7 @@ import functools
 import itertools
 import math
 import random
-import re
+from traceback import TracebackException
 from typing import Any, Dict
 
 import discord
@@ -320,7 +320,7 @@ class VoiceState:
                     await self.songs.put(self.current)
                 self.current = None
                 try:
-                    await asyncio.wait_for(self.get_new_current(), 60)
+                    await asyncio.wait_for(self.get_new_current(), 180)
                 except asyncio.TimeoutError:
                     self.bot.loop.create_task(self.disconnect())
                     return
@@ -598,4 +598,4 @@ class Music(commands.Cog):
                 raise commands.CommandError("Bot is already in a voice channel.")
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
-        await ctx.send(f"An error occurred: {str(error)}")
+        await ctx.send(f"An error occurred: {''.join(TracebackException.from_exception(error).format())}")
