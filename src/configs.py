@@ -20,8 +20,8 @@ class AvailableCogs:
 
 @dataclass(frozen=True)
 class SpotifyAuthConfigs:
-    username: str
-    password: str
+    client_id: str
+    client_secret: str
 
 
 @dataclass(frozen=True)
