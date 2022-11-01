@@ -570,7 +570,7 @@ class Music(commands.Cog):
                     await ctx.send(f"Enqueued {str(sources[0])}")
                 else:
                     await ctx.invoke(self._queue)
-'''
+    '''
     @commands.command(name="playlist", aliases=["pl"])
     async def _playlist(self, ctx: commands.Context, url: str):
         """Queues a playlist, must use a URL."""
@@ -586,7 +586,8 @@ class Music(commands.Cog):
                     song = Song(source)
                     await ctx.voice_state.songs.put(song)
                 await ctx.invoke(self._queue)
-'''
+    '''
+
     @_join.before_invoke
     @_play.before_invoke
     async def ensure_voice_state(self, ctx: commands.Context):
