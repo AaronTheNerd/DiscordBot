@@ -34,7 +34,8 @@ def main():
     if CONFIGS.cogs.misc.enabled:
         bot.add_cog(MiscCog(bot, **CONFIGS.cogs.misc.kwargs))
 
-    bot.add_cog(EventsCog(bot))
+    if CONFIGS.cogs.events.enabled:
+        bot.add_cog(EventsCog(bot, **CONFIGS.cogs.events.kwargs))
 
     if CONFIGS.cogs.youtube.enabled:
         bot.add_cog(Music(bot, **CONFIGS.cogs.youtube.kwargs))
