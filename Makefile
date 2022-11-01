@@ -5,7 +5,7 @@ VENV = pipenv
 .PHONY: run setup-venv shell clean
 
 run:
-	$(VENV) run $(PY) discord_bot/bot.py
+	$(VENV) run $(PY) src/bot.py
 
 setup-venv:
 	$(PIP) install $(VENV)
