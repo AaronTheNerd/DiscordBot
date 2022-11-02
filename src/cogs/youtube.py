@@ -31,25 +31,24 @@ Additions from Original:
 - Modified the nowplaying embed to show whether the current song will loop or 
   if the queue will loop
 - Added the ability to queue up playlists
-- Made vote skip a variable amount
+- Made vote skip a variable amount (Broken because of the API)
 - Added a force skip for administators
 - Removed volume command
 ================================================================================
 """
 
 import asyncio
-from dataclasses import dataclass
 import functools
 import itertools
 import math
 import random
+from dataclasses import dataclass
 from traceback import TracebackException
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import discord
 import youtube_dl
 from discord.ext import commands
-
 from utils.search import Search
 
 # Silence useless bug reports messages
@@ -125,26 +124,27 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
     @classmethod
     async def create_source(
-        cls, ctx: commands.Context, _search: Search, *, loop: asyncio.BaseEventLoop = None
+        cls, ctx: commands.Context, _search: Search, *, loop: Optional[asyncio.AbstractEventLoop] = None
     ):
-        results = []
-        for search in _search.searches:
-            loop = loop or asyncio.get_event_loop()
-            partial = functools.partial(cls.ytdl.extract_info, search, download=False, process=False)
-            data = await loop.run_in_executor(None, partial)
-            if data is None:
-                raise YTDLError(f"Couldn't find anything that matches `{search}`")
-            if "entries" not in data:
-                process_info = data
-            else:
-                process_info = None
-                for entry in data["entries"]:
-                    if entry:
-                        process_info = entry
-                        break
-                if process_info is None:
+        async def func(search: str, loop: asyncio.AbstractEventLoop, is_url: bool):
+            if not is_url:
+                partial = functools.partial(cls.ytdl.extract_info, search, download=False, process=False)
+                data = await loop.run_in_executor(None, partial)
+                if data is None:
                     raise YTDLError(f"Couldn't find anything that matches `{search}`")
-            webpage_url = process_info["webpage_url"]
+                if "entries" not in data:
+                    process_info = data
+                else:
+                    process_info = None
+                    for entry in data["entries"]:
+                        if entry:
+                            process_info = entry
+                            break
+                    if process_info is None:
+                        raise YTDLError(f"Couldn't find anything that matches `{search}`")
+                webpage_url = process_info["webpage_url"]
+            else:
+                webpage_url = search
             partial = functools.partial(cls.ytdl.extract_info, webpage_url, download=False)
             processed_info = await loop.run_in_executor(None, partial)
             if processed_info is None:
@@ -158,17 +158,21 @@ class YTDLSource(discord.PCMVolumeTransformer):
                         info = processed_info["entries"].pop(0)
                     except IndexError:
                         raise YTDLError(f"Couldn't retrieve any matches for `{webpage_url}`")
-            results.append(cls(ctx, discord.FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info))
-        return results
+            return cls(ctx, discord.FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
+        
+        loop = loop or asyncio.get_event_loop()
+        coroutines = [ func(search, loop, _search.is_url) for search in _search.searches ]
+        return await asyncio.gather(*coroutines)
 
     @classmethod
     async def create_source_playlist(
-        cls, ctx: commands.Context, _search: Search, *, loop: asyncio.BaseEventLoop = None
+        cls, ctx: commands.Context, _search: Search, *, loop: Optional[asyncio.AbstractEventLoop] = None
     ):
         search = _search.searches[0]
         loop = loop or asyncio.get_event_loop()
         partial = functools.partial(cls.ytdl.extract_info, search, download=False, process=False)
         data = await loop.run_in_executor(None, partial)
+
         if data is None:
             raise YTDLError(f"Couldn't find anything that matches `{search}`")
         if "entries" not in data:
@@ -180,29 +184,31 @@ class YTDLSource(discord.PCMVolumeTransformer):
                     entries.append(entry)
             if len(entries) == 0:
                 raise YTDLError(f"Couldn't find anything that matches `{search}`")
-        results = []
+        
+        coroutines = []
         for entry in entries:
             try:
-                results += await cls.create_source(ctx, Search(f"https://www.youtube.com/watch?v={entry['url']}"), loop=loop)
+                coroutines.append(cls.create_source(ctx, Search(f"https://www.youtube.com/watch?v={entry['url']}"), loop=loop))
             except:
                 pass
-        return results
+        
+        return await asyncio.gather(*coroutines)
 
     @staticmethod
     def parse_duration(duration: int):
         minutes, seconds = divmod(duration, 60)
         hours, minutes = divmod(minutes, 60)
         days, hours = divmod(hours, 24)
-        duration = []
+        duration_list = []
         if days > 0:
-            duration.append(f"{days} days")
+            duration_list.append(f"{days} days")
         if hours > 0:
-            duration.append(f"{hours} hours")
+            duration_list.append(f"{hours} hours")
         if minutes > 0:
-            duration.append(f"{minutes} minutes")
+            duration_list.append(f"{minutes} minutes")
         if seconds > 0:
-            duration.append(f"{seconds} seconds")
-        return ", ".join(duration)
+            duration_list.append(f"{seconds} seconds")
+        return ", ".join(duration_list)
 
 
 
@@ -257,7 +263,7 @@ class SongQueue(asyncio.Queue):
 
 
 class VoiceState:
-    def __init__(self, bot: commands.Bot, cog: commands.Cog, ctx: commands.Context):
+    def __init__(self, bot: commands.Bot, cog: 'Music', ctx: commands.Context):
         self.bot = bot
         self.cog = cog
         self._ctx = ctx
@@ -292,14 +298,6 @@ class VoiceState:
     @loopqueue.setter
     def loopqueue(self, value: bool):
         self._loopqueue = value
-
-    @property
-    def volume(self):
-        return self._volume
-
-    @volume.setter
-    def volume(self, value: float):
-        self._volume = value
 
     @property
     def is_playing(self):
@@ -390,7 +388,7 @@ class Music(commands.Cog):
         ctx.voice_state = self.get_voice_state(ctx)
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
-        await ctx.send(f"An error occurred: {str(error)}")
+        await ctx.send(f"An error occurred: {''.join(TracebackException.from_exception(error).format())}")
 
     @commands.command(name="join", aliases=["summon"], invoke_without_subcommand=True)
     async def _join(self, ctx: commands.Context):
@@ -596,6 +594,3 @@ class Music(commands.Cog):
         if ctx.voice_client:
             if ctx.voice_client.channel != ctx.author.voice.channel:
                 raise commands.CommandError("Bot is already in a voice channel.")
-
-    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
-        await ctx.send(f"An error occurred: {''.join(TracebackException.from_exception(error).format())}")
