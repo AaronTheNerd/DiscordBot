@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import requests
 
@@ -17,14 +17,14 @@ class TrackResponse:
     href: str
     id: str
     is_local: bool
+    name: str
+    popularity: int
+    preview_url: str
+    track_number: int
+    type: str
+    uri: str
     is_playable: bool = field(default=False)
     linked_from: Dict[str, Any] = field(default_factory=dict)
-    name: str = field(default="UNNAMED")
-    popularity: int = field(default=0)
-    preview_url: str = field(default="/")
-    track_number: int = field(default=0)
-    type: str = field(default="UNKNOWN")
-    uri: str = field(default="UNKNOWN")
 
 
 @dataclass
