@@ -12,6 +12,7 @@ class Search:
     search: str
     searches: List[str] = field(default_factory=list, init=False)
     playlist: bool = field(default=False, init=False)
+    is_url: bool = field(default=False, init=False)
 
     youtube_url: str = field(default="https://www.youtube.com", init=False)
 
@@ -24,6 +25,7 @@ class Search:
         path: List[str] = parse_result.path.split("/")
         if len(path) < 2:
             return
+        self.is_url = True
         if parse_result.netloc in ["www.youtube.com", "youtube.com"] or (
             parse_result.netloc == "" and parse_result.path[0] in ["www.youtube.com", "youtube.com"]
         ):
@@ -43,6 +45,7 @@ class Search:
         elif parse_result.netloc == "open.spotify.com" or (
             parse_result.netloc == "" and parse_result.path[0] == "open.spotify.com"
         ):
+            self.is_url = False
             api = SpotifyAPI(CONFIGS.spotify.client_id, CONFIGS.spotify.client_secret)
             if path[1] == "track":
                 t_resp: TrackResponse = api.get_track(path[2])
@@ -53,6 +56,7 @@ class Search:
                     f"{track['track']['name']} by {track['track']['artists'][0]['name']}"
                     for track in pl_resp.tracks["items"]
                 ]
+        self.is_url = False
 
 
 if __name__ == "__main__":
