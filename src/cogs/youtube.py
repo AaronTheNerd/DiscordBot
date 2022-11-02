@@ -192,7 +192,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
             except:
                 pass
         
-        return await asyncio.gather(*coroutines)
+        return [ source for sublist in await asyncio.gather(*coroutines) for source in sublist ]
 
     @staticmethod
     def parse_duration(duration: int):
