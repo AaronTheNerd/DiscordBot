@@ -131,7 +131,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         _search: Search,
         *,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-    ) -> List[YTDLSource]:
+    ) -> List[asyncio.Future[List[YTDLSource]]]:
         async def func(search: str, loop: asyncio.AbstractEventLoop, is_url: bool) -> YTDLSource:
             if not is_url:
                 partial = functools.partial(
@@ -173,7 +173,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         # Divide the coroutines evenly into groups
         coroutines = [ coroutines[i:i + 10] for i in range(0, len(coroutines), 10) ]
         # Gather and flatten coroutines
-        return [ source for coroutine_group in coroutines for source in await asyncio.gather(*coroutine_group) ]
+        return [ asyncio.gather(*coroutine_group) for coroutine_group in coroutines ]
         return await asyncio.gather(*coroutines)
 
     @classmethod
@@ -183,7 +183,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         _search: Search,
         *,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-    ) -> List[YTDLSource]:
+    ) -> List[asyncio.Future[List[YTDLSource]]]:
         search = _search.searches[0]
         loop = loop or asyncio.get_event_loop()
         partial = functools.partial(cls.ytdl.extract_info, search, download=False, process=False)
@@ -216,7 +216,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         # Divide the coroutines evenly into groups
         coroutines = [ coroutines[i:i + 10] for i in range(0, len(coroutines), 10) ]
         # Gather and flatten coroutines
-        return [ source for coroutine_group in coroutines for source in await asyncio.gather(*coroutine_group) ]
+        return [ asyncio.gather(*coroutine_group) for coroutine_group in coroutines ]
         return [source for sublist in await asyncio.gather(*coroutines) for source in sublist]
 
     @staticmethod
@@ -578,21 +578,19 @@ class Music(commands.Cog):
             try:
                 _search = Search(search)
                 if _search.playlist:
-                    sources = await YTDLSource.create_source_playlist(
+                    futures = await YTDLSource.create_source_playlist(
                         ctx, _search, loop=self.bot.loop
                     )
                 else:
-                    sources = await YTDLSource.create_source(ctx, _search, loop=self.bot.loop)
+                    futures = await YTDLSource.create_source(ctx, _search, loop=self.bot.loop)
             except YTDLError as e:
                 await ctx.send(f"An error occurred while processing this request: {str(e)}")
             else:
-                songs = [Song(source) for source in sources]
-                for song in songs:
-                    await ctx.voice_state.songs.put(song)
-                if len(sources) == 1:
-                    await ctx.send(f"Enqueued {str(sources[0])}")
-                else:
-                    await ctx.invoke(self._queue)
+                for future in futures:
+                    songs = [Song(source) for source in await future]
+                    for song in songs:
+                        await ctx.voice_state.songs.put(song)
+                await ctx.invoke(self._queue)
 
     @_join.before_invoke
     @_play.before_invoke
