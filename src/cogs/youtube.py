@@ -170,6 +170,10 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         loop = loop or asyncio.get_event_loop()
         coroutines = [func(search, loop, _search.is_url) for search in _search.searches]
+        # Divide the coroutines evenly into groups
+        coroutines = [ coroutines[i:i + 10] for i in range(0, len(coroutines), 10) ]
+        # Gather and flatten coroutines
+        return [ source for coroutine_group in coroutines for source in await asyncio.gather(*coroutine_group) ]
         return await asyncio.gather(*coroutines)
 
     @classmethod
@@ -207,7 +211,12 @@ class YTDLSource(discord.PCMVolumeTransformer):
                 )
             except:
                 pass
-
+        # Flatten the coroutines
+        coroutines = [ coroutine for sublist in coroutines for coroutine in sublist ]
+        # Divide the coroutines evenly into groups
+        coroutines = [ coroutines[i:i + 10] for i in range(0, len(coroutines), 10) ]
+        # Gather and flatten coroutines
+        return [ source for coroutine_group in coroutines for source in await asyncio.gather(*coroutine_group) ]
         return [source for sublist in await asyncio.gather(*coroutines) for source in sublist]
 
     @staticmethod
