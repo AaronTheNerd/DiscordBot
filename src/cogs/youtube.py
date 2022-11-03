@@ -46,7 +46,7 @@ import math
 import random
 from dataclasses import dataclass
 from traceback import TracebackException
-from typing import Any, Dict, List, Optional
+from typing import Any, Awaitable, Dict, List, Optional
 
 import discord
 import youtube_dl
@@ -132,7 +132,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         _search: Search,
         *,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-    ) -> List[asyncio.Future[List[YTDLSource]]]:
+    ) -> List[Awaitable[YTDLSource]]:
         async def func(search: str, loop: asyncio.AbstractEventLoop, is_url: bool) -> YTDLSource:
             if not is_url:
                 partial = functools.partial(
@@ -170,7 +170,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
             return cls(ctx, discord.FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
         loop = loop or asyncio.get_event_loop()
-        coroutines = [func(search, loop, _search.is_url) for search in _search.searches]
+        return [func(search, loop, _search.is_url) for search in _search.searches]
         # Divide the coroutines evenly into groups
         coroutines = [ coroutines[i:i + 5] for i in range(0, len(coroutines), 5) ]
         # Gather and flatten coroutines
@@ -184,7 +184,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         _search: Search,
         *,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-    ) -> List[asyncio.Future[List[YTDLSource]]]:
+    ) -> List[Awaitable[YTDLSource]]:
         search = _search.searches[0]
         loop = loop or asyncio.get_event_loop()
         partial = functools.partial(cls.ytdl.extract_info, search, download=False, process=False)
@@ -205,13 +205,10 @@ class YTDLSource(discord.PCMVolumeTransformer):
         coroutines = []
         for entry in entries:
             try:
-                coroutines.append(
-                    cls.create_source(
-                        ctx, Search(f"https://www.youtube.com/watch?v={entry['url']}"), loop=loop
-                    )
-                )
+                coroutines += await cls.create_source(ctx, Search(f"https://www.youtube.com/watch?v={entry['url']}"), loop=loop)
             except:
                 pass
+        return coroutines
         # Flatten the coroutines
         coroutines = [ coroutine for sublist in coroutines for coroutine in sublist ]
         # Divide the coroutines evenly into groups
@@ -588,9 +585,8 @@ class Music(commands.Cog):
                 await ctx.send(f"An error occurred while processing this request: {str(e)}")
             else:
                 for future in futures:
-                    songs = [Song(source) for source in await future]
-                    for song in songs:
-                        await ctx.voice_state.songs.put(song)
+                    song = Song(await future)
+                    await ctx.voice_state.songs.put(song)
                 await ctx.invoke(self._queue)
 
     @_join.before_invoke
