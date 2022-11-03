@@ -353,7 +353,8 @@ class VoiceState:
 
     def play_next_song(self, error: Optional[Exception] = None) -> None:
         if error:
-            raise VoiceError(str(error))
+            pass
+            #raise VoiceError(str(error))
         self.next.set()
 
     def skip(self) -> None:
