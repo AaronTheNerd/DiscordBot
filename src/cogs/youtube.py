@@ -46,11 +46,12 @@ import math
 import random
 from dataclasses import dataclass
 from traceback import TracebackException
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, List, Optional
 
 import discord
 import youtube_dl
 from discord.ext import commands
+
 from utils.search import Search
 
 # Silence useless bug reports messages
@@ -171,7 +172,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         loop = loop or asyncio.get_event_loop()
         coroutines = [func(search, loop, _search.is_url) for search in _search.searches]
         # Divide the coroutines evenly into groups
-        coroutines = [ coroutines[i:i + 10] for i in range(0, len(coroutines), 10) ]
+        coroutines = [ coroutines[i:i + 5] for i in range(0, len(coroutines), 5) ]
         # Gather and flatten coroutines
         return [ asyncio.gather(*coroutine_group) for coroutine_group in coroutines ]
         return await asyncio.gather(*coroutines)
