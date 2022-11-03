@@ -134,26 +134,23 @@ class YTDLSource(discord.PCMVolumeTransformer):
         loop: Optional[asyncio.AbstractEventLoop] = None,
     ) -> List[Awaitable[YTDLSource]]:
         async def func(search: str, loop: asyncio.AbstractEventLoop, is_url: bool) -> YTDLSource:
-            if not is_url:
-                partial = functools.partial(
-                    cls.ytdl.extract_info, search, download=False, process=False
-                )
-                data = await loop.run_in_executor(None, partial)
-                if data is None:
-                    raise YTDLError(f"Couldn't find anything that matches `{search}`")
-                if "entries" not in data:
-                    process_info = data
-                else:
-                    process_info = None
-                    for entry in data["entries"]:
-                        if entry:
-                            process_info = entry
-                            break
-                    if process_info is None:
-                        raise YTDLError(f"Couldn't find anything that matches `{search}`")
-                webpage_url = process_info["webpage_url"]
+            partial = functools.partial(
+                cls.ytdl.extract_info, search, download=False, process=False
+            )
+            data = await loop.run_in_executor(None, partial)
+            if data is None:
+                raise YTDLError(f"Couldn't find anything that matches `{search}`")
+            if "entries" not in data:
+                process_info = data
             else:
-                webpage_url = search
+                process_info = None
+                for entry in data["entries"]:
+                    if entry:
+                        process_info = entry
+                        break
+                if process_info is None:
+                    raise YTDLError(f"Couldn't find anything that matches `{search}`")
+            webpage_url = process_info["webpage_url"]
             partial = functools.partial(cls.ytdl.extract_info, webpage_url, download=False)
             processed_info = await loop.run_in_executor(None, partial)
             if processed_info is None:
