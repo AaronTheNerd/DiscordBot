@@ -27,7 +27,7 @@ from cogs.youtube import Music
 from configs import CONFIGS
 
 
-def main():
+def main() -> None:
 
     bot = commands.Bot(command_prefix=CONFIGS.command_prefix, case_insensitive=CONFIGS.case_insensitive)
 

@@ -43,7 +43,7 @@ def _replaceWithDataclass(raw_configs: Dict[str, Any], cls: Type[T]) -> T:
     return cls(**raw_configs)
 
 
-def _getConfigs():
+def _getConfigs() -> Configs:
     abs_path = os.path.abspath(os.path.dirname(__file__))
     raw_json = {}
     with open(f"{abs_path}/../config.json") as configs:

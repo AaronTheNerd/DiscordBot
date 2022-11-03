@@ -16,7 +16,7 @@ class Search:
 
     youtube_url: str = field(default="https://www.youtube.com", init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.searches = [self.search]
         try:
             parse_result: ParseResult = urlparse(self.search)

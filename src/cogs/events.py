@@ -22,36 +22,31 @@ class RandomInsult:
 
 
 class EventsCog(commands.Cog, name="Events"):
-    def __init__(self, bot, role_on_join: Dict[str, Any], random_insult_on_command: Dict[str, Any]):
+    def __init__(
+        self, bot, role_on_join: Dict[str, Any], random_insult_on_command: Dict[str, Any]
+    ) -> None:
         self.bot = bot
         self.role = RoleOnJoin(**role_on_join)
         self.insult = RandomInsult(**random_insult_on_command)
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         print(f"Logged in as: {self.bot.user}")
 
     @commands.Cog.listener()
-    async def on_member_join(self, ctx):
+    async def on_member_join(self, ctx: commands.Context) -> None:
         if self.role.enabled:
             role = discord.utils.get(ctx.guild.roles, name=self.role.role)
             await ctx.author.add_roles(role)
 
     @commands.Cog.listener()
-    async def on_command(self, ctx):
-        if (
-            self.insult.enabled
-            and random.random() < self.insult.insult_chance
-        ):
+    async def on_command(self, ctx: commands.Context) -> None:
+        if self.insult.enabled and random.random() < self.insult.insult_chance:
             insult = f"You're a "
             if random.random() < self.insult.adjective_chance:
-                insult += (
-                    random.choice(self.insult.adjectives) + ", "
-                )
+                insult += random.choice(self.insult.adjectives) + ", "
             insult += random.choice(self.insult.insults)
-            await ctx.send(
-                insult, delete_after=self.insult.delete_after
-            )
+            await ctx.send(insult, delete_after=self.insult.delete_after)
 
-    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError):
+    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
         await ctx.send(f"An error occurred: {str(error)}")
