@@ -585,8 +585,12 @@ class Music(commands.Cog):
                 await ctx.send(f"An error occurred while processing this request: {str(e)}")
             else:
                 for future in futures:
-                    song = Song(await future)
-                    await ctx.voice_state.songs.put(song)
+                    try:
+                        song = Song(await future)
+                    except Exception:
+                        continue
+                    else:
+                        await ctx.voice_state.songs.put(song)
                 await ctx.invoke(self._queue)
 
     @_join.before_invoke
