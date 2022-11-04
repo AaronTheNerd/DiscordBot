@@ -283,7 +283,8 @@ class SongQueue(asyncio.Queue):
 
     async def put(self, *args, **kwargs) -> None:
         async with self.lock:
-            await super().put(*args, **kwargs)
+            print("Obtained lock in put()")
+            await self._queue.put(*args, **kwargs)
             self.song_added_flag.set()
 
     async def get(self, *args, **kwargs) -> Any:
@@ -566,7 +567,7 @@ class Music(commands.Cog):
         embed = discord.Embed(
             description=f"**{len(ctx.voice_state.songs)} tracks:**\n\n{queue}"
         ).set_footer(text=f"Viewing page {page}/{pages}")
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, delete_after=10 * 60)
 
     @commands.command(name="shuffle", aliases=["random"])
     async def _shuffle(self, ctx: commands.Context) -> None:
