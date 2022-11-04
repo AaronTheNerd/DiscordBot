@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import inspect
 import itertools
 import math
 import random
@@ -172,11 +173,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
         loop = loop or asyncio.get_event_loop()
         return [func(search, loop, _search.is_url) for search in _search.searches]
-        # Divide the coroutines evenly into groups
-        coroutines = [ coroutines[i:i + 5] for i in range(0, len(coroutines), 5) ]
-        # Gather and flatten coroutines
-        return [ asyncio.gather(*coroutine_group) for coroutine_group in coroutines ]
-        return await asyncio.gather(*coroutines)
 
     @classmethod
     async def create_source_playlist(
@@ -210,13 +206,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
             except:
                 pass
         return coroutines
-        # Flatten the coroutines
-        coroutines = [ coroutine for sublist in coroutines for coroutine in sublist ]
-        # Divide the coroutines evenly into groups
-        coroutines = [ coroutines[i:i + 10] for i in range(0, len(coroutines), 10) ]
-        # Gather and flatten coroutines
-        return [ asyncio.gather(*coroutine_group) for coroutine_group in coroutines ]
-        return [source for sublist in await asyncio.gather(*coroutines) for source in sublist]
 
     @staticmethod
     def parse_duration(duration: int) -> str:
@@ -236,11 +225,19 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 
 class Song:
-    __slots__ = ("source", "requester")
+    __slots__ = ("source", "requester", "pending")
 
-    def __init__(self, source: YTDLSource) -> None:
+    def __init__(self, source: YTDLSource, pending: bool = False) -> None:
         self.source = source
         self.requester = source.requester
+        self.pending = pending
+
+    @classmethod
+    def create_pending(cls, source: Awaitable[YTDLSource]) -> Awaitable[Song]:
+        async def func(source: Awaitable[YTDLSource]) -> Song:
+            return cls(await source)
+        return func(source)
+
 
     def create_embed(self, loop: bool = False, loopqueue: bool = False) -> discord.Embed:
         embed = (
@@ -263,7 +260,13 @@ class Song:
 
 
 class SongQueue(asyncio.Queue):
-    def __getitem__(self, item) -> Song | List[Song]:
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.song_added_flag = asyncio.Event()
+        self.lock = asyncio.Lock()
+
+    def __getitem__(self, item) -> Any | List[Any]:
         if isinstance(item, slice):
             return list(itertools.islice(self._queue, item.start, item.stop, item.step))
         else:
@@ -275,6 +278,18 @@ class SongQueue(asyncio.Queue):
     def __len__(self) -> int:
         return self.qsize()
 
+    async def put(self, *args, **kwargs) -> None:
+        async with self.lock:
+            await super().put(*args, **kwargs)
+            self.song_added_flag.set()
+
+    async def get(self, *args, **kwargs) -> Any:
+        async with self.lock:
+            result = await super().get(*args, **kwargs)
+        if inspect.isawaitable(result):
+            result = await result
+        return result
+
     def clear(self) -> None:
         self._queue.clear()
 
@@ -283,6 +298,18 @@ class SongQueue(asyncio.Queue):
 
     def remove(self, index: int) -> None:
         del self._queue[index]
+
+    async def lazy_load_task(self) -> None:
+        while True:
+            await self.song_added_flag.wait()
+            async with self.lock:
+                for index, song in enumerate(self._queue_):
+                    if inspect.isawaitable(song):
+                        self._queue[index] = await song
+                        break
+                else:
+                    self.song_added_flag.clear()
+
 
 
 class VoiceState:
@@ -302,9 +329,11 @@ class VoiceState:
         self.skip_votes = set()
 
         self.audio_player = bot.loop.create_task(self.audio_player_task())
+        self.lazy_loader = bot.loop.create_task(self.songs.lazy_load_task())
 
     def __del__(self) -> None:
         self.audio_player.cancel()
+        self.lazy_loader.cancel()
 
     @property
     def loop(self) -> bool:
@@ -522,7 +551,10 @@ class Music(commands.Cog):
         end = start + items_per_page
         queue = ""
         for i, song in enumerate(ctx.voice_state.songs[start:end], start=start):
-            queue += f"`{i + 1}.` [**{song.source.title}**]({song.source.url})\n"
+            if not inspect.isawaitable(song):
+                queue += f"`{i + 1}.` [**{song.source.title}**]({song.source.url})\n"
+            else:
+                queue += f"`{i + 1}.` Pending...\n"
         embed = discord.Embed(
             description=f"**{len(ctx.voice_state.songs)} tracks:**\n\n{queue}"
         ).set_footer(text=f"Viewing page {page}/{pages}")
@@ -587,12 +619,8 @@ class Music(commands.Cog):
                 await ctx.send(f"An error occurred while processing this request: {str(e)}")
             else:
                 for future in futures:
-                    try:
-                        song = Song(await future)
-                    except Exception:
-                        continue
-                    else:
-                        await ctx.voice_state.songs.put(song)
+                    song = Song.create_pending(future)
+                    await ctx.voice_state.songs.put(song)
                 await ctx.invoke(self._queue)
 
     @_join.before_invoke
