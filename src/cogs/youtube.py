@@ -36,7 +36,8 @@ Additions from Original:
 - Removed volume command
 - Added ability to use spotify playlists/songs
 - Added ability to lazy load songs to reduce server strain on long playlists
-
+- Made the queue command delete after some set time
+- Made the automated now playing embed delete after the song ends
 ================================================================================
 """
 
@@ -374,6 +375,7 @@ class VoiceState:
         self.current = await self.songs.get()
 
     async def audio_player_task(self) -> None:
+        msg = None
         while True:
             self.next.clear()
             if not self.loop:
@@ -391,8 +393,11 @@ class VoiceState:
                     return
             self.current.source.volume = self._volume
             self.voice.play(self.current.source, after=self.play_next_song)
-            await self.current.source.channel.send(
-                embed=self.now_playing_embed(), delete_after=self.current.source.duration
+            if msg is not None:
+                await msg.delete()
+                msg = None
+            msg = await self.current.source.channel.send(
+                embed=self.now_playing_embed()
             )
             await self.bot.change_presence(
                 activity=discord.Activity(
@@ -547,7 +552,7 @@ class Music(commands.Cog):
             total_votes = len(ctx.voice_state.skip_votes)
             if ctx.author.voice is None:
                 ctx.send("You're not in a vc.")
-            members = ctx.author.voice.channel.voice_states.keys()
+            members = list(map(lambda x: ctx.message.guild.get_member(x) or None, ctx.author.voice.channel.voice_states.keys()))
             # members = ctx.voice_state.voice.channel.members
             print(f"MEMBERS {members}")
             if self.voteskip.exclude_idle:
