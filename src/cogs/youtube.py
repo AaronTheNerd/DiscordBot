@@ -629,14 +629,21 @@ class Music(commands.Cog):
                 await ctx.send(f"An error occurred while processing this request: {str(e)}")
             else:
                 print(f"Successfully created sources: {futures}")
+                loop = self.bot.loop or asyncio.get_event_loop()
                 if len(futures) > 10:
                     for future in futures:
                         song = Song.create_pending(future)
-                        await ctx.voice_state.songs.put(song)
+                        partial = functools.partial(
+                            ctx.voice_state.songs.put, song
+                        )
+                        await loop.run_in_executor(None, partial)
                 else:
                     for future in futures:
                         song = Song(await future)
-                        await ctx.voice_state.songs.put(song)
+                        partial = functools.partial(
+                            ctx.voice_state.songs.put, song
+                        )
+                        await loop.run_in_executor(None, partial)
                         print(f"Added song {song}")
                 await ctx.invoke(self._queue)
 
