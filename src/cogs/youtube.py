@@ -153,9 +153,11 @@ class YTDLSource(discord.PCMVolumeTransformer):
                     if process_info is None:
                         raise YTDLError(f"Couldn't find anything that matches `{search}`")
                 webpage_url = process_info["webpage_url"]
-                print(webpage_url)
+                print(f"not a url: {search}")
             else:
                 webpage_url = search
+                print(f"is a url: {search}")
+            print(f"create_source() url: {webpage_url}")
             partial = functools.partial(cls.ytdl.extract_info, webpage_url, download=False)
             processed_info = await loop.run_in_executor(None, partial)
             if processed_info is None:
@@ -309,7 +311,7 @@ class SongQueue(asyncio.Queue):
                     if inspect.isawaitable(song):
                         try:
                             self._queue[index] = await song
-                            print(f"Laze loaded: {self._queue[index]}")
+                            print(f"Lazy loaded: {self._queue[index]}")
                         except Exception:
                             del self._queue[index]
                         break
