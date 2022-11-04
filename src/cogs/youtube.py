@@ -621,9 +621,14 @@ class Music(commands.Cog):
             except YTDLError as e:
                 await ctx.send(f"An error occurred while processing this request: {str(e)}")
             else:
-                for future in futures:
-                    song = Song.create_pending(future)
-                    await ctx.voice_state.songs.put(song)
+                if len(futures) > 10:
+                    for future in futures:
+                        song = Song.create_pending(future)
+                        await ctx.voice_state.songs.put(song)
+                else:
+                    for future in futures:
+                        song = Song(await future)
+                        await ctx.voice_state.songs.put(song)
                 await ctx.invoke(self._queue)
 
     @_join.before_invoke
