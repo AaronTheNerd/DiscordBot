@@ -134,7 +134,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
         *,
         loop: Optional[asyncio.AbstractEventLoop] = None,
     ) -> List[Awaitable[YTDLSource]]:
-        async def func(search: str, loop: asyncio.AbstractEventLoop, is_url: bool) -> YTDLSource:
+        async def func(search: str, loop: Optional[asyncio.AbstractEventLoop], is_url: bool) -> YTDLSource:
+            loop = loop or asyncio.get_event_loop()
             if not is_url:
                 partial = functools.partial(
                     cls.ytdl.extract_info, search, download=False, process=False
@@ -174,7 +175,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
             print(f"Creating class with url {info['url']}")
             return cls(ctx, discord.FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
-        loop = loop or asyncio.get_event_loop()
         return [func(search, loop, _search.is_url) for search in _search.searches]
 
     @classmethod
