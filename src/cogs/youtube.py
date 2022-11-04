@@ -286,8 +286,10 @@ class SongQueue(asyncio.Queue):
     async def get(self, *args, **kwargs) -> Any:
         async with self.lock:
             result = await super().get(*args, **kwargs)
+            print(f"get() song {result}")
             if inspect.isawaitable(result):
                 result = await result
+                print(f"awaited: {result}")
         return result
 
     def clear(self) -> None:
@@ -307,6 +309,7 @@ class SongQueue(asyncio.Queue):
                     if inspect.isawaitable(song):
                         try:
                             self._queue[index] = await song
+                            print(f"Laze loaded: {self._queue[index]}")
                         except Exception:
                             del self._queue[index]
                         break
