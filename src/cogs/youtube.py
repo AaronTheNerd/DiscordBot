@@ -282,7 +282,6 @@ class SongQueue(asyncio.Queue):
         return self.qsize()
 
     async def put(self, *args, **kwargs) -> None:
-        print("Obtained lock in put()")
         await super().put(*args, **kwargs)
         self.song_added_flag.set()
 
@@ -305,19 +304,23 @@ class SongQueue(asyncio.Queue):
         del self._queue[index]
 
     async def lazy_load_task(self) -> None:
+        has_awaitable: bool = True
         while True:
             await self.song_added_flag.wait()
+            has_awaitable = False
             async with self.lock:
-                for index, song in enumerate(self._queue_):
+                for index, song in enumerate(self._queue):
                     if inspect.isawaitable(song):
                         try:
                             self._queue[index] = await song
                             print(f"Lazy loaded: {self._queue[index]}")
+                            has_awaitable = True
+                            break
                         except Exception:
                             del self._queue[index]
                         break
-                else:
-                    self.song_added_flag.clear()
+            if not has_awaitable:
+                self.song_added_flag.clear()
 
 
 
