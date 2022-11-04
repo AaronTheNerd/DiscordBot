@@ -47,7 +47,7 @@ import math
 import random
 from dataclasses import dataclass
 from traceback import TracebackException
-from typing import Any, Awaitable, Dict, List, Optional
+from typing import Any, Awaitable, Coroutine, Dict, List, Optional
 
 import discord
 import youtube_dl
@@ -181,7 +181,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         _search: Search,
         *,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-    ) -> List[Awaitable[YTDLSource]]:
+    ) -> List[Coroutine[Any, Any, YTDLSource]]:
         search = _search.searches[0]
         loop = loop or asyncio.get_event_loop()
         partial = functools.partial(cls.ytdl.extract_info, search, download=False, process=False)
@@ -606,6 +606,7 @@ class Music(commands.Cog):
         This command automatically searches from various sites if no URL is provided.
         A list of these sites can be found here: https://rg3.github.io/youtube-dl/supportedsites.html
         """
+        print(f"Play called w/ {search}")
         if not ctx.voice_state.voice:
             await ctx.invoke(self._join)
         async with ctx.typing():
@@ -617,9 +618,10 @@ class Music(commands.Cog):
                     )
                 else:
                     futures = await YTDLSource.create_source(ctx, _search, loop=self.bot.loop)
-            except YTDLError as e:
+            except Exception as e:
                 await ctx.send(f"An error occurred while processing this request: {str(e)}")
             else:
+                print(f"Successfully created sources: {futures}")
                 if len(futures) > 10:
                     for future in futures:
                         song = Song.create_pending(future)
@@ -628,6 +630,7 @@ class Music(commands.Cog):
                     for future in futures:
                         song = Song(await future)
                         await ctx.voice_state.songs.put(song)
+                        print(f"Added song {song}")
                 await ctx.invoke(self._queue)
 
     @_join.before_invoke
