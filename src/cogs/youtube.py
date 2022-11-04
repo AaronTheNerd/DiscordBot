@@ -286,8 +286,8 @@ class SongQueue(asyncio.Queue):
     async def get(self, *args, **kwargs) -> Any:
         async with self.lock:
             result = await super().get(*args, **kwargs)
-        if inspect.isawaitable(result):
-            result = await result
+            if inspect.isawaitable(result):
+                result = await result
         return result
 
     def clear(self) -> None:
@@ -305,7 +305,10 @@ class SongQueue(asyncio.Queue):
             async with self.lock:
                 for index, song in enumerate(self._queue_):
                     if inspect.isawaitable(song):
-                        self._queue[index] = await song
+                        try:
+                            self._queue[index] = await song
+                        except Exception:
+                            del self._queue[index]
                         break
                 else:
                     self.song_added_flag.clear()
