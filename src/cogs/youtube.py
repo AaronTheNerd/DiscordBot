@@ -266,7 +266,7 @@ class SongQueue(asyncio.Queue):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.song_added_flag = asyncio.Event()
+        self.songs_modified = asyncio.Event()
         self.lock = asyncio.Lock()
 
     def __getitem__(self, item) -> Any | List[Any]:
@@ -283,7 +283,7 @@ class SongQueue(asyncio.Queue):
 
     async def put(self, *args, **kwargs) -> None:
         await super().put(*args, **kwargs)
-        self.song_added_flag.set()
+        self.songs_modified.set()
 
     async def get(self, *args, **kwargs) -> Any:
         async with self.lock:
@@ -292,6 +292,7 @@ class SongQueue(asyncio.Queue):
             if inspect.isawaitable(result):
                 result = await result
                 print(f"awaited: {result}")
+        self.songs_modified.set()
         return result
 
     def clear(self) -> None:
@@ -299,14 +300,16 @@ class SongQueue(asyncio.Queue):
 
     def shuffle(self) -> None:
         random.shuffle(self._queue)
+        self.songs_modified.set()
 
     def remove(self, index: int) -> None:
         del self._queue[index]
+        self.songs_modified.set()
 
     async def lazy_load_task(self) -> None:
         has_awaitable: bool = True
         while True:
-            await self.song_added_flag.wait()
+            await self.songs_modified.wait()
             has_awaitable = False
             async with self.lock:
                 for index, song in enumerate(self._queue):
@@ -322,7 +325,7 @@ class SongQueue(asyncio.Queue):
                             del self._queue[index]
                         break
             if not has_awaitable:
-                self.song_added_flag.clear()
+                self.songs_modified.clear()
 
 
 
@@ -571,7 +574,7 @@ class Music(commands.Cog):
         embed = discord.Embed(
             description=f"**{len(ctx.voice_state.songs)} tracks:**\n\n{queue}"
         ).set_footer(text=f"Viewing page {page}/{pages}")
-        await ctx.send(embed=embed, delete_after=10 * 60)
+        await ctx.send(embed=embed, delete_after=60)
 
     @commands.command(name="shuffle", aliases=["random"])
     async def _shuffle(self, ctx: commands.Context) -> None:
