@@ -21,7 +21,7 @@ Modified by Aaron Barge 2021
 
 Requirements:
 
-Python installation with access to pip, then simply run
+Python 3.8 installation with access to pip, then simply run
 `make setup-venv`
 to install pipenv and all the requirements for the project
 
@@ -34,6 +34,9 @@ Additions from Original:
 - Made vote skip a variable amount (Broken because of the API)
 - Added a force skip for administators
 - Removed volume command
+- Added ability to use spotify playlists/songs
+- Added ability to lazy load songs to reduce server strain on long playlists
+
 ================================================================================
 """
 
@@ -134,7 +137,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
         *,
         loop: Optional[asyncio.AbstractEventLoop] = None,
     ) -> List[Awaitable[YTDLSource]]:
-        async def func(search: str, loop: Optional[asyncio.AbstractEventLoop], is_url: bool) -> YTDLSource:
+        async def func(
+            search: str, loop: Optional[asyncio.AbstractEventLoop], is_url: bool
+        ) -> YTDLSource:
             loop = loop or asyncio.get_event_loop()
             if not is_url:
                 partial = functools.partial(
@@ -154,11 +159,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
                     if process_info is None:
                         raise YTDLError(f"Couldn't find anything that matches `{search}`")
                 webpage_url = process_info["webpage_url"]
-                print(f"not a url: {search}")
             else:
                 webpage_url = search
-                print(f"is a url: {search}")
-            print(f"create_source() url: {webpage_url}")
             partial = functools.partial(cls.ytdl.extract_info, webpage_url, download=False)
             processed_info = await loop.run_in_executor(None, partial)
             if processed_info is None:
@@ -172,7 +174,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
                         info = processed_info["entries"].pop(0)
                     except IndexError:
                         raise YTDLError(f"Couldn't retrieve any matches for `{webpage_url}`")
-            print(f"Creating class with url {info['url']}")
             return cls(ctx, discord.FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
         return [func(search, loop, _search.is_url) for search in _search.searches]
@@ -205,7 +206,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
         coroutines = []
         for entry in entries:
             try:
-                coroutines += await cls.create_source(ctx, Search(f"https://www.youtube.com/watch?v={entry['url']}"), loop=loop)
+                coroutines += await cls.create_source(
+                    ctx, Search(f"https://www.youtube.com/watch?v={entry['url']}"), loop=loop
+                )
             except:
                 pass
         return coroutines
@@ -228,19 +231,18 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 
 class Song:
-    __slots__ = ("source", "requester", "pending")
+    __slots__ = ("source", "requester")
 
-    def __init__(self, source: YTDLSource, pending: bool = False) -> None:
+    def __init__(self, source: YTDLSource) -> None:
         self.source = source
         self.requester = source.requester
-        self.pending = pending
 
     @classmethod
     def create_pending(cls, source: Awaitable[YTDLSource]) -> Awaitable[Song]:
         async def func(source: Awaitable[YTDLSource]) -> Song:
             return cls(await source)
-        return func(source)
 
+        return func(source)
 
     def create_embed(self, loop: bool = False, loopqueue: bool = False) -> discord.Embed:
         embed = (
@@ -263,9 +265,9 @@ class Song:
 
 
 class SongQueue(asyncio.Queue):
-
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, lazy_load: int, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.lazy_load = lazy_load
         self.songs_modified = asyncio.Event()
         self.lock = asyncio.Lock()
 
@@ -288,10 +290,8 @@ class SongQueue(asyncio.Queue):
     async def get(self, *args, **kwargs) -> Any:
         async with self.lock:
             result = await super().get(*args, **kwargs)
-            print(f"get() song {result}")
             if inspect.isawaitable(result):
                 result = await result
-                print(f"awaited: {result}")
         self.songs_modified.set()
         return result
 
@@ -313,12 +313,11 @@ class SongQueue(asyncio.Queue):
             has_awaitable = False
             async with self.lock:
                 for index, song in enumerate(self._queue):
-                    if index > 30:
+                    if index >= self.lazy_load:
                         break
                     if inspect.isawaitable(song):
                         try:
                             self._queue[index] = await song
-                            print(f"Lazy loaded: {self._queue[index]}")
                             has_awaitable = True
                             break
                         except Exception:
@@ -326,7 +325,6 @@ class SongQueue(asyncio.Queue):
                         break
             if not has_awaitable:
                 self.songs_modified.clear()
-
 
 
 class VoiceState:
@@ -338,7 +336,7 @@ class VoiceState:
         self.current = None
         self.voice = None
         self.next = asyncio.Event()
-        self.songs = SongQueue()
+        self.songs = SongQueue(cog.lazy_load)
 
         self._loop = False
         self._loopqueue = False
@@ -387,13 +385,15 @@ class VoiceState:
                     await self.songs.put(self.current)
                 self.current = None
                 try:
-                    await asyncio.wait_for(self.get_new_current(), 180)
+                    await asyncio.wait_for(self.get_new_current(), self.cog.disconnect_timeout)
                 except asyncio.TimeoutError:
                     self.bot.loop.create_task(self.disconnect())
                     return
             self.current.source.volume = self._volume
             self.voice.play(self.current.source, after=self.play_next_song)
-            await self.current.source.channel.send(embed=self.now_playing_embed())
+            await self.current.source.channel.send(
+                embed=self.now_playing_embed(), delete_after=self.current.source.duration
+            )
             await self.bot.change_presence(
                 activity=discord.Activity(
                     type=discord.ActivityType.listening, name=self.current.source.title
@@ -432,10 +432,20 @@ class VoteSkipConfigs:
 
 
 class Music(commands.Cog):
-    def __init__(self, bot: commands.Bot, voteskip: Dict[str, Any]) -> None:
+    def __init__(
+        self,
+        bot: commands.Bot,
+        voteskip: Dict[str, Any],
+        disconnect_timeout: int,
+        lazy_load: int,
+        delete_queue: int,
+    ) -> None:
         self.bot = bot
         self.voice_states = {}
         self.voteskip = VoteSkipConfigs(**voteskip)
+        self.disconnect_timeout = disconnect_timeout
+        self.lazy_load = lazy_load
+        self.delete_queue = delete_queue
 
     def get_voice_state(self, ctx: commands.Context) -> VoiceState:
         state = self.voice_states.get(ctx.guild.id)
@@ -537,7 +547,7 @@ class Music(commands.Cog):
             total_votes = len(ctx.voice_state.skip_votes)
             if ctx.author.voice is None:
                 ctx.send("You're not in a vc.")
-            members = ctx.author.voice.channel.members
+            members = ctx.author.voice.channel.voice_states.keys()
             # members = ctx.voice_state.voice.channel.members
             print(f"MEMBERS {members}")
             if self.voteskip.exclude_idle:
@@ -574,7 +584,7 @@ class Music(commands.Cog):
         embed = discord.Embed(
             description=f"**{len(ctx.voice_state.songs)} tracks:**\n\n{queue}"
         ).set_footer(text=f"Viewing page {page}/{pages}")
-        await ctx.send(embed=embed, delete_after=60)
+        await ctx.send(embed=embed, delete_after=self.delete_queue)
 
     @commands.command(name="shuffle", aliases=["random"])
     async def _shuffle(self, ctx: commands.Context) -> None:
@@ -620,7 +630,6 @@ class Music(commands.Cog):
         This command automatically searches from various sites if no URL is provided.
         A list of these sites can be found here: https://rg3.github.io/youtube-dl/supportedsites.html
         """
-        print(f"Play called w/ {search}")
         if not ctx.voice_state.voice:
             await ctx.invoke(self._join)
         async with ctx.typing():
@@ -635,17 +644,9 @@ class Music(commands.Cog):
             except Exception as e:
                 await ctx.send(f"An error occurred while processing this request: {str(e)}")
             else:
-                print(f"Successfully created sources: {futures}")
-                loop = self.bot.loop or asyncio.get_event_loop()
-                if len(futures) > 10:
-                    for future in futures:
-                        song = Song.create_pending(future)
-                        await ctx.voice_state.songs.put(song)
-                else:
-                    for future in futures:
-                        song = Song(await future)
-                        await ctx.voice_state.songs.put(song)
-                        print(f"Added song {song}")
+                for future in futures:
+                    song = Song.create_pending(future)
+                    await ctx.voice_state.songs.put(song)
                 await ctx.invoke(self._queue)
 
     @_join.before_invoke
