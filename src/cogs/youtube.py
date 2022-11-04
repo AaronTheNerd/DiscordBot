@@ -283,7 +283,7 @@ class SongQueue(asyncio.Queue):
 
     async def put(self, *args, **kwargs) -> None:
         print("Obtained lock in put()")
-        await self._queue.put(*args, **kwargs)
+        await super().put(*args, **kwargs)
         self.song_added_flag.set()
 
     async def get(self, *args, **kwargs) -> Any:
