@@ -171,6 +171,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
                         info = processed_info["entries"].pop(0)
                     except IndexError:
                         raise YTDLError(f"Couldn't retrieve any matches for `{webpage_url}`")
+            print(f"Creating class with url {info['url']}")
             return cls(ctx, discord.FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
         loop = loop or asyncio.get_event_loop()
