@@ -282,10 +282,9 @@ class SongQueue(asyncio.Queue):
         return self.qsize()
 
     async def put(self, *args, **kwargs) -> None:
-        async with self.lock:
-            print("Obtained lock in put()")
-            await self._queue.put(*args, **kwargs)
-            self.song_added_flag.set()
+        print("Obtained lock in put()")
+        await self._queue.put(*args, **kwargs)
+        self.song_added_flag.set()
 
     async def get(self, *args, **kwargs) -> Any:
         async with self.lock:
@@ -633,11 +632,11 @@ class Music(commands.Cog):
                 if len(futures) > 10:
                     for future in futures:
                         song = Song.create_pending(future)
-                        loop.run_until_complete(ctx.voice_state.songs.put(song))
+                        await ctx.voice_state.songs.put(song)
                 else:
                     for future in futures:
                         song = Song(await future)
-                        loop.run_until_complete(ctx.voice_state.songs.put(song))
+                        await ctx.voice_state.songs.put(song)
                         print(f"Added song {song}")
                 await ctx.invoke(self._queue)
 
