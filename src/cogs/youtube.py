@@ -309,7 +309,9 @@ class SongQueue(asyncio.Queue):
             await self.song_added_flag.wait()
             has_awaitable = False
             async with self.lock:
-                for index, song in enumerate(self._queue[:30]):
+                for index, song in enumerate(self._queue):
+                    if index > 30:
+                        break
                     if inspect.isawaitable(song):
                         try:
                             self._queue[index] = await song
