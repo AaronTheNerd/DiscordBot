@@ -633,17 +633,11 @@ class Music(commands.Cog):
                 if len(futures) > 10:
                     for future in futures:
                         song = Song.create_pending(future)
-                        partial = functools.partial(
-                            ctx.voice_state.songs.put, song
-                        )
-                        await loop.run_in_executor(None, partial)
+                        loop.run_until_complete(ctx.voice_state.songs.put(song))
                 else:
                     for future in futures:
                         song = Song(await future)
-                        partial = functools.partial(
-                            ctx.voice_state.songs.put, song
-                        )
-                        await loop.run_in_executor(None, partial)
+                        loop.run_until_complete(ctx.voice_state.songs.put(song))
                         print(f"Added song {song}")
                 await ctx.invoke(self._queue)
 
