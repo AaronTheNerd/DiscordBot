@@ -522,7 +522,7 @@ class Music(commands.Cog):
     async def _stop(self, ctx: commands.Context) -> None:
         """Stops playing song and clears the queue."""
         ctx.voice_state.songs.clear()
-        if not ctx.voice_state.is_playing:
+        if ctx.voice_state.is_playing:
             ctx.voice_state.voice.stop()
             await ctx.message.add_reaction("⏹")
 
@@ -554,7 +554,6 @@ class Music(commands.Cog):
                 ctx.send("You're not in a vc.")
             members = list(map(lambda x: ctx.message.guild.get_member(x) or None, ctx.author.voice.channel.voice_states.keys()))
             # members = ctx.voice_state.voice.channel.members
-            print(f"MEMBERS {members}")
             if self.voteskip.exclude_idle:
                 members = [member for member in members if member.status != "idle"]
             votes_needed = self.voteskip.fraction * float(len(members) - 1)
