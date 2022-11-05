@@ -18,6 +18,7 @@ Permissions:
 Permission Integer: 305155152
 """
 
+import discord
 from discord.ext import commands
 
 from cogs.dnd import DnDCog
@@ -29,7 +30,10 @@ from configs import CONFIGS
 
 def main() -> None:
 
-    bot = commands.Bot(command_prefix=CONFIGS.command_prefix, case_insensitive=CONFIGS.case_insensitive)
+    intents = discord.Intents.default()
+    intents.members = True
+    
+    bot = commands.Bot(command_prefix=CONFIGS.command_prefix, case_insensitive=CONFIGS.case_insensitive, intents=intents)
 
     if CONFIGS.cogs.misc.enabled:
         bot.add_cog(MiscCog(bot, **CONFIGS.cogs.misc.kwargs))
