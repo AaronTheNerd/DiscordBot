@@ -552,12 +552,12 @@ class Music(commands.Cog):
             total_votes = len(ctx.voice_state.skip_votes)
             if ctx.author.voice is None:
                 ctx.send("You're not in a vc.")
-            members = list(map(lambda x: ctx.message.guild.get_member(x) or None, ctx.author.voice.channel.voice_states.keys()))
+            members = ctx.author.voice.channel.voice_states.keys()
             # members = ctx.voice_state.voice.channel.members
-            if self.voteskip.exclude_idle:
+            if False: #self.voteskip.exclude_idle:
                 members = [member for member in members if member.status != "idle"]
             votes_needed = self.voteskip.fraction * float(len(members) - 1)
-            await ctx.send(f"Whose in vc: {str([member.name for member in members])}")
+            #await ctx.send(f"Whose in vc: {str([member.name for member in members])}")
             await ctx.send(
                 f"Skip vote added, currently at **{total_votes}/{str(math.ceil(votes_needed))}**"
             )
