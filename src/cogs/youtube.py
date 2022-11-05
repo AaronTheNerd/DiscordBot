@@ -545,7 +545,6 @@ class Music(commands.Cog):
             return await ctx.send("Not playing any music right now...")
         voter = ctx.message.author
         ids_in_vc = list(ctx.author.voice.channel.voice_states.keys())
-        await ctx.send(f"IDs: {ids_in_vc}")
         if self.voteskip.requester_autoskip and voter == ctx.voice_state.current.requester:
             await ctx.message.add_reaction("⏭")
             ctx.voice_state.skip()
