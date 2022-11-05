@@ -544,20 +544,21 @@ class Music(commands.Cog):
         if not ctx.voice_state.is_playing:
             return await ctx.send("Not playing any music right now...")
         voter = ctx.message.author
+        ids_in_vc = ctx.author.voice.channel.voice_states.keys()
         if self.voteskip.requester_autoskip and voter == ctx.voice_state.current.requester:
             await ctx.message.add_reaction("⏭")
             ctx.voice_state.skip()
-        elif voter.id not in ctx.voice_state.skip_votes:
+        elif voter.id not in ctx.voice_state.skip_votes and voter.id in ids_in_vc:
             ctx.voice_state.skip_votes.add(voter.id)
             total_votes = len(ctx.voice_state.skip_votes)
             if ctx.author.voice is None:
                 ctx.send("You're not in a vc.")
-            members = ctx.author.voice.channel.voice_states.keys()
+            members = list(filter(lambda x: x is not None, map(ctx.guild.get_member, ids_in_vc)))
             # members = ctx.voice_state.voice.channel.members
-            if False: #self.voteskip.exclude_idle:
+            if self.voteskip.exclude_idle:
                 members = [member for member in members if member.status != "idle"]
             votes_needed = self.voteskip.fraction * float(len(members) - 1)
-            #await ctx.send(f"Whose in vc: {str([member.name for member in members])}")
+            await ctx.send(f"Whose in vc: {str([member.name for member in members])}")
             await ctx.send(
                 f"Skip vote added, currently at **{total_votes}/{str(math.ceil(votes_needed))}**"
             )
