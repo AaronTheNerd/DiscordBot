@@ -51,7 +51,7 @@ import math
 import random
 from dataclasses import dataclass
 from traceback import TracebackException
-from typing import Any, Awaitable, Coroutine, Dict, List, Optional
+from typing import Any, Awaitable, Coroutine, Dict, List, Optional, Set
 
 import discord
 import youtube_dl
@@ -343,6 +343,7 @@ class VoiceState:
         self._loopqueue = False
         self._volume = 0.5
         self.skip_votes = set()
+        self.skip_votes_msg = None
 
         self.audio_player = bot.loop.create_task(self.audio_player_task())
         self.lazy_loader = bot.loop.create_task(self.songs.lazy_load_task())
@@ -413,6 +414,9 @@ class VoiceState:
 
     def skip(self) -> None:
         self.skip_votes.clear()
+        if self.skip_votes_msg is not None:
+            self.skip_votes_msg.delete()
+            self.skip_votes_msg = None
         if self.is_playing:
             self.voice.stop()
 
@@ -535,6 +539,20 @@ class Music(commands.Cog):
         await ctx.message.add_reaction("⏭")
         ctx.voice_state.skip()
 
+    @staticmethod
+    def voteskip_embed(members: List[discord.Member], skip_votes: Set[int], votes_needed: int) -> discord.Embed:
+        embed = discord.Embed(
+            title="Voting Status",
+            description="",
+            color=discord.Color.blurple(),
+        )
+        for member in members:
+            embed.add_field(name=member.mention, value=f'{"✅" if member.id in skip_votes else "❌"}', inline=True)
+
+        embed.add_field(name="Vote Count", value=f"{len(skip_votes)}/{votes_needed}")
+        
+        return embed
+
     @commands.command(name="voteskip", aliases=["vs"])
     async def _voteskip(self, ctx: commands.Context) -> None:
         """Vote to skip a song.
@@ -548,19 +566,20 @@ class Music(commands.Cog):
         if self.voteskip.requester_autoskip and voter == ctx.voice_state.current.requester:
             await ctx.message.add_reaction("⏭")
             ctx.voice_state.skip()
-        elif voter.id not in ctx.voice_state.skip_votes and voter.id in ids_in_vc:
+        elif voter.id not in ctx.voice_state.skip_votes:
             ctx.voice_state.skip_votes.add(voter.id)
             total_votes = len(ctx.voice_state.skip_votes)
-            if ctx.author.voice is None:
+            if ctx.author.voice is None or voter.id in ids_in_vc:
                 ctx.send("You're not in a vc.")
-            members = list(filter(lambda x: x is not None, map(ctx.guild.get_member, ids_in_vc)))
-            # members = ctx.voice_state.voice.channel.members
+            members = list(filter(lambda x: x is not None and not x.bot, map(ctx.guild.get_member, ids_in_vc)))
             if self.voteskip.exclude_idle:
                 members = [member for member in members if member.status != "idle"]
-            votes_needed = self.voteskip.fraction * float(len(members) - 1)
-            await ctx.send(f"Whose in vc: {str([member.name for member in members])}")
-            await ctx.send(
-                f"Skip vote added, currently at **{total_votes}/{str(math.ceil(votes_needed))}**"
+            votes_needed = math.ceil(self.voteskip.fraction * len(members))
+            if ctx.voice_state.skip_votes_msg is not None:
+                ctx.voice_state.skip_votes_msg.delete()
+                ctx.voice_state.skip_votes_msg = None
+            ctx.voice_state.skip_votes_msg = await ctx.send(
+                embed=self.voteskip_embed(members, ctx.voice_state.skip_votes, votes_needed)
             )
             if total_votes >= votes_needed:
                 await ctx.message.add_reaction("⏭")
