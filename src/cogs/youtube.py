@@ -537,14 +537,14 @@ class Music(commands.Cog):
 
     @staticmethod
     def voteskip_embed(members: List[discord.Member], skip_votes: Set[int], votes_needed: int) -> discord.Embed:
+        description = ""
+        for member in members:
+            description += f'`{"✅" if member.id in skip_votes else "❌"}`   {member.mention}\n'
         embed = discord.Embed(
             title="Voting Status",
-            description="",
+            description=description,
             color=discord.Color.blurple(),
         )
-        for member in members:
-            embed.add_field(name=member.mention, value=f'{"✅" if member.id in skip_votes else "❌"}', inline=True)
-
         embed.add_field(name="Vote Count", value=f"{len(skip_votes)}/{votes_needed}")
         
         return embed
