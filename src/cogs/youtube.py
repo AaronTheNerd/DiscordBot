@@ -266,9 +266,10 @@ class Song:
 
 
 class SongQueue(asyncio.Queue):
-    def __init__(self, lazy_load: int, *args, **kwargs) -> None:
+    def __init__(self, lazy_load: int, max_lazy_load: int, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.lazy_load = lazy_load
+        self.max_lazy_load = max_lazy_load
         self.songs_modified = asyncio.Event()
         self.lock = asyncio.Lock()
 
@@ -313,6 +314,10 @@ class SongQueue(asyncio.Queue):
             await self.songs_modified.wait()
             has_awaitable = False
             async with self.lock:
+                if self.max_lazy_load < len(
+                    list(filter(lambda x: not inspect.isawaitable(x), self._queue))
+                ):
+                    continue
                 for index, song in enumerate(self._queue):
                     if index >= self.lazy_load:
                         break
@@ -337,7 +342,7 @@ class VoiceState:
         self.current = None
         self.voice = None
         self.next = asyncio.Event()
-        self.songs = SongQueue(cog.lazy_load)
+        self.songs = SongQueue(cog.lazy_load, cog.max_lazy_load)
 
         self._loop = False
         self._loopqueue = False
@@ -441,6 +446,7 @@ class Music(commands.Cog):
         voteskip: Dict[str, Any],
         disconnect_timeout: int,
         lazy_load: int,
+        max_lazy_load: int,
         delete_queue: int,
     ) -> None:
         self.bot = bot
@@ -448,6 +454,7 @@ class Music(commands.Cog):
         self.voteskip = VoteSkipConfigs(**voteskip)
         self.disconnect_timeout = disconnect_timeout
         self.lazy_load = lazy_load
+        self.max_lazy_load = max_lazy_load
         self.delete_queue = delete_queue
 
     def get_voice_state(self, ctx: commands.Context) -> VoiceState:
@@ -539,7 +546,7 @@ class Music(commands.Cog):
     ) -> discord.Embed:
         description = ""
         for member in members:
-            description += f'`{"✅" if member.id in skip_votes else "❌"}`   {member.mention}\n'
+            description += f'{"✅" if member.id in skip_votes else "❌"}   {member.mention}\n'
         embed = discord.Embed(
             title="Voting Status",
             description=description,
