@@ -396,9 +396,7 @@ class VoiceState:
             if msg is not None:
                 await msg.delete()
                 msg = None
-            msg = await self.current.source.channel.send(
-                embed=self.now_playing_embed()
-            )
+            msg = await self.current.source.channel.send(embed=self.now_playing_embed())
             await self.bot.change_presence(
                 activity=discord.Activity(
                     type=discord.ActivityType.listening, name=self.current.source.title
@@ -536,7 +534,9 @@ class Music(commands.Cog):
         ctx.voice_state.skip()
 
     @staticmethod
-    def voteskip_embed(members: List[discord.Member], skip_votes: Set[int], votes_needed: int) -> discord.Embed:
+    def voteskip_embed(
+        members: List[discord.Member], skip_votes: Set[int], votes_needed: int
+    ) -> discord.Embed:
         description = ""
         for member in members:
             description += f'`{"✅" if member.id in skip_votes else "❌"}`   {member.mention}\n'
@@ -546,7 +546,7 @@ class Music(commands.Cog):
             color=discord.Color.blurple(),
         )
         embed.add_field(name="Vote Count", value=f"{len(skip_votes)}/{votes_needed}")
-        
+
         return embed
 
     @commands.command(name="voteskip", aliases=["vs"])
@@ -567,16 +567,20 @@ class Music(commands.Cog):
             total_votes = len(ctx.voice_state.skip_votes)
             if ctx.author.voice is None or voter.id in ids_in_vc:
                 ctx.send("You're not in a vc.")
-            members = list(filter(lambda x: x is not None and not x.bot, map(ctx.guild.get_member, ids_in_vc)))
+            members = list(
+                filter(lambda x: x is not None and not x.bot, map(ctx.guild.get_member, ids_in_vc))
+            )
             if self.voteskip.exclude_idle:
                 members = [member for member in members if member.status != "idle"]
             votes_needed = math.ceil(self.voteskip.fraction * len(members))
-            await ctx.send(
-                embed=self.voteskip_embed(members, ctx.voice_state.skip_votes, votes_needed)
-            )
             if total_votes >= votes_needed:
                 await ctx.message.add_reaction("⏭")
                 ctx.voice_state.skip()
+            else:
+                await ctx.send(
+                    embed=self.voteskip_embed(members, ctx.voice_state.skip_votes, votes_needed),
+                    delete_after=60 * 10,
+                )
         else:
             await ctx.send("You have already voted to skip this song.")
 
