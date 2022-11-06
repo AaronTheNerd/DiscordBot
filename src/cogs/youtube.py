@@ -343,7 +343,6 @@ class VoiceState:
         self._loopqueue = False
         self._volume = 0.5
         self.skip_votes = set()
-        self.skip_votes_msg = None
 
         self.audio_player = bot.loop.create_task(self.audio_player_task())
         self.lazy_loader = bot.loop.create_task(self.songs.lazy_load_task())
@@ -414,9 +413,6 @@ class VoiceState:
 
     def skip(self) -> None:
         self.skip_votes.clear()
-        if self.skip_votes_msg is not None:
-            self.skip_votes_msg.delete()
-            self.skip_votes_msg = None
         if self.is_playing:
             self.voice.stop()
 
@@ -575,10 +571,7 @@ class Music(commands.Cog):
             if self.voteskip.exclude_idle:
                 members = [member for member in members if member.status != "idle"]
             votes_needed = math.ceil(self.voteskip.fraction * len(members))
-            if ctx.voice_state.skip_votes_msg is not None:
-                ctx.voice_state.skip_votes_msg.delete()
-                ctx.voice_state.skip_votes_msg = None
-            ctx.voice_state.skip_votes_msg = await ctx.send(
+            await ctx.send(
                 embed=self.voteskip_embed(members, ctx.voice_state.skip_votes, votes_needed)
             )
             if total_votes >= votes_needed:
