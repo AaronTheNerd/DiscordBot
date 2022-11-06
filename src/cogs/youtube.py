@@ -114,12 +114,15 @@ class YTDLSource(discord.PCMVolumeTransformer):
         self.uploader = data.get("uploader")
         self.uploader_url = data.get("uploader_url")
         date = data.get("upload_date")
-        self.upload_date = date[6:8] + "." + date[4:6] + "." + date[0:4]
+        if date is not None:
+            self.upload_date = date[6:8] + "." + date[4:6] + "." + date[0:4]
         self.title = data.get("title")
         self.thumbnail = data.get("thumbnail")
         self.description = data.get("description")
-        self.duration = int(data.get("duration"))
-        self.duration_str = self.parse_duration(int(data.get("duration")))
+        duration = data.get("duration")
+        if duration is not None:
+            self.duration = int(duration)
+            self.duration_str = self.parse_duration(duration)
         self.tags = data.get("tags")
         self.url = data.get("webpage_url")
         self.views = data.get("view_count")
@@ -253,7 +256,7 @@ class Song:
                 color=discord.Color.blurple(),
             )
             .add_field(name="Duration", value=self.source.duration_str)
-            .add_field(name="Requested by", value=self.requester.mention)
+            .add_field(name="Requested by", value=self.requester.mention)  # type:ignore
             .add_field(
                 name="Uploader", value=f"[{self.source.uploader}]({self.source.uploader_url})"
             )
@@ -275,12 +278,12 @@ class SongQueue(asyncio.Queue):
 
     def __getitem__(self, item) -> Any | List[Any]:
         if isinstance(item, slice):
-            return list(itertools.islice(self._queue, item.start, item.stop, item.step))
+            return list(itertools.islice(self._queue, item.start, item.stop, item.step))  # type: ignore
         else:
-            return self._queue[item]
+            return self._queue[item]  # type: ignore
 
     def __iter__(self):
-        return self._queue.__iter__()
+        return self._queue.__iter__()  # type: ignore
 
     def __len__(self) -> int:
         return self.qsize()
@@ -298,14 +301,14 @@ class SongQueue(asyncio.Queue):
         return result
 
     def clear(self) -> None:
-        self._queue.clear()
+        self._queue.clear()  # type: ignore
 
     def shuffle(self) -> None:
-        random.shuffle(self._queue)
+        random.shuffle(self._queue)  # type: ignore
         self.songs_modified.set()
 
     def remove(self, index: int) -> None:
-        del self._queue[index]
+        del self._queue[index]  # type: ignore
         self.songs_modified.set()
 
     async def lazy_load_task(self) -> None:
@@ -315,20 +318,22 @@ class SongQueue(asyncio.Queue):
             has_awaitable = False
             async with self.lock:
                 if self.max_lazy_load < len(
-                    list(filter(lambda x: not inspect.isawaitable(x), self._queue))
+                    list(filter(lambda x: not inspect.isawaitable(x), self._queue))  # type: ignore
                 ):
+                    self.songs_modified.clear()
                     continue
-                for index, song in enumerate(self._queue):
+                for index, song in enumerate(self._queue):  # type: ignore
                     if index >= self.lazy_load:
                         break
                     if inspect.isawaitable(song):
                         try:
-                            self._queue[index] = await song
+                            self._queue[index] = await song  # type: ignore
+                        except Exception:
+                            del self._queue[index]  # type: ignore
+                            break
+                        else:
                             has_awaitable = True
                             break
-                        except Exception:
-                            del self._queue[index]
-                        break
             if not has_awaitable:
                 self.songs_modified.clear()
 
@@ -384,10 +389,6 @@ class VoiceState:
         while True:
             self.next.clear()
             if not self.loop:
-                # Try to get the next song within 3 minutes.
-                # If no song will be added to the queue in time,
-                # the player will disconnect due to performance
-                # reasons.
                 if self.loopqueue and self.current is not None:
                     await self.songs.put(self.current)
                 self.current = None
@@ -396,18 +397,20 @@ class VoiceState:
                 except asyncio.TimeoutError:
                     self.bot.loop.create_task(self.disconnect())
                     return
-            self.current.source.volume = self._volume
-            self.voice.play(self.current.source, after=self.play_next_song)
-            if msg is not None:
-                await msg.delete()
-                msg = None
-            msg = await self.current.source.channel.send(embed=self.now_playing_embed())
-            await self.bot.change_presence(
-                activity=discord.Activity(
-                    type=discord.ActivityType.listening, name=self.current.source.title
+            if self.current is not None:
+                self.current.source.volume = self._volume
+                if self.voice is not None:
+                    self.voice.play(self.current.source, after=self.play_next_song)
+                if msg is not None:
+                    await msg.delete()
+                    msg = None
+                msg = await self.current.source.channel.send(embed=self.now_playing_embed())
+                await self.bot.change_presence(
+                    activity=discord.Activity(
+                        type=discord.ActivityType.listening, name=self.current.source.title
+                    )
                 )
-            )
-            await self.next.wait()
+                await self.next.wait()
 
     def play_next_song(self, error: Optional[Exception] = None) -> None:
         if error:
@@ -416,7 +419,7 @@ class VoiceState:
 
     def skip(self) -> None:
         self.skip_votes.clear()
-        if self.is_playing:
+        if self.is_playing and self.voice is not None:
             self.voice.stop()
 
     async def stop(self) -> None:
@@ -428,8 +431,9 @@ class VoiceState:
     async def disconnect(self) -> None:
         await self._ctx.invoke(self.cog._leave)
 
-    def now_playing_embed(self) -> discord.Embed:
-        return self.current.create_embed(self._loop, self._loopqueue)
+    def now_playing_embed(self) -> Optional[discord.Embed]:
+        if self.current is not None:
+            return self.current.create_embed(self._loop, self._loopqueue)
 
 
 @dataclass
@@ -458,10 +462,10 @@ class Music(commands.Cog):
         self.delete_queue = delete_queue
 
     def get_voice_state(self, ctx: commands.Context) -> VoiceState:
-        state = self.voice_states.get(ctx.guild.id)
+        state = self.voice_states.get(ctx.guild.id)  # type: ignore
         if not state:
             state = VoiceState(self.bot, self, ctx)
-            self.voice_states[ctx.guild.id] = state
+            self.voice_states[ctx.guild.id] = state  # type: ignore
         return state
 
     def cog_unload(self) -> None:
@@ -474,7 +478,7 @@ class Music(commands.Cog):
         return True
 
     async def cog_before_invoke(self, ctx: commands.Context) -> None:
-        ctx.voice_state = self.get_voice_state(ctx)
+        ctx.voice_state = self.get_voice_state(ctx)  # type: ignore
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
         await ctx.send(
@@ -484,61 +488,65 @@ class Music(commands.Cog):
     @commands.command(name="join", aliases=["summon"], invoke_without_subcommand=True)
     async def _join(self, ctx: commands.Context) -> None:
         """Joins a voice channel."""
-        destination = ctx.author.voice.channel
-        if ctx.voice_state.voice:
-            await ctx.voice_state.voice.move_to(destination)
+        destination = ctx.author.voice.channel  # type: ignore
+        if ctx.voice_state.voice:  # type: ignore
+            await ctx.voice_state.voice.move_to(destination)  # type: ignore
             return
-        ctx.voice_state.voice = await destination.connect()
+        ctx.voice_state.voice = await destination.connect()  # type: ignore
 
     @commands.command(name="disconnect", aliases=["dc", "leave", "dis"])
     async def _leave(self, ctx: commands.Context, silent: bool = False) -> None:
         """Clears the queue and leaves the voice channel."""
-        if not ctx.voice_state.voice:
+        if not ctx.voice_state.voice:  # type: ignore
             if not silent:
                 await ctx.send("Not connected to any voice channel.")
             return
-        await ctx.voice_state.stop()
+        await ctx.voice_state.stop()  # type: ignore
         await self.bot.change_presence(status=discord.Status.idle)
-        del self.voice_states[ctx.guild.id]
+        del self.voice_states[ctx.guild.id]  # type: ignore
 
     @commands.command(name="nowplaying", aliases=["np"])
     async def _now(self, ctx: commands.Context) -> None:
         """Displays the currently playing song."""
-        if ctx.voice_state.current is not None:
-            await ctx.send(embed=ctx.voice_state.now_playing_embed())
+        if ctx.voice_state.current is not None:  # type: ignore
+            await ctx.send(embed=ctx.voice_state.now_playing_embed())  # type: ignore
         else:
             await ctx.send("Nothing playing at the moment.")
 
     @commands.command(name="pause", aliases=["stop"])
     async def _pause(self, ctx: commands.Context) -> None:
         """Pauses the currently playing song."""
-        if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
-            ctx.voice_state.voice.pause()
-            await ctx.message.add_reaction("⏯")
+        if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():  # type: ignore
+            ctx.voice_state.voice.pause()  # type: ignore
+            if ctx.message is not None:
+                await ctx.message.add_reaction("⏯")
 
     @commands.command(name="resume", aliases=["re", "res", "continue"])
     async def _resume(self, ctx: commands.Context) -> None:
         """Resumes a currently paused song."""
-        if ctx.voice_state.is_playing is not None and ctx.voice_state.voice.is_paused():
-            ctx.voice_state.voice.resume()
-            await ctx.message.add_reaction("⏯")
+        if ctx.voice_state.is_playing is not None and ctx.voice_state.voice.is_paused():  # type: ignore
+            ctx.voice_state.voice.resume()  # type: ignore
+            if ctx.message is not None:
+                await ctx.message.add_reaction("⏯")
 
     @commands.command(name="clear", aliases=["cl"])
     async def _stop(self, ctx: commands.Context) -> None:
         """Stops playing song and clears the queue."""
-        ctx.voice_state.songs.clear()
-        if ctx.voice_state.is_playing:
-            ctx.voice_state.voice.stop()
-            await ctx.message.add_reaction("⏹")
+        ctx.voice_state.songs.clear()  # type: ignore
+        if ctx.voice_state.is_playing:  # type: ignore
+            ctx.voice_state.voice.stop()  # type: ignore
+            if ctx.message is not None:
+                await ctx.message.add_reaction("⏹")
 
     @commands.command(name="skip", aliases=["next", "s"])
     @commands.has_permissions(administrator=True)
     async def _skip(self, ctx: commands.Context) -> None:
         """Skips a song without vote."""
-        if not ctx.voice_state.is_playing:
+        if not ctx.voice_state.is_playing:  # type: ignore
             return await ctx.send("Not playing any music right now...")
-        await ctx.message.add_reaction("⏭")
-        ctx.voice_state.skip()
+        if ctx.message is not None:
+            await ctx.message.add_reaction("⏭")
+        ctx.voice_state.skip()  # type: ignore
 
     @staticmethod
     def voteskip_embed(
@@ -546,7 +554,7 @@ class Music(commands.Cog):
     ) -> discord.Embed:
         description = ""
         for member in members:
-            description += f'{"✅" if member.id in skip_votes else "❌"}   {member.mention}\n'
+            description += f'{"✅" if member.id in skip_votes else "❌"}   {member.mention}\n'  # type: ignore
         embed = discord.Embed(
             title="Voting Status",
             description=description,
@@ -562,30 +570,33 @@ class Music(commands.Cog):
 
         The requestor can skip the current song without a vote.
         """
-        if not ctx.voice_state.is_playing:
+        if not ctx.voice_state.is_playing:  # type: ignore
             return await ctx.send("Not playing any music right now...")
-        voter = ctx.message.author
-        ids_in_vc = list(ctx.author.voice.channel.voice_states.keys())
-        if self.voteskip.requester_autoskip and voter == ctx.voice_state.current.requester:
-            await ctx.message.add_reaction("⏭")
-            ctx.voice_state.skip()
-        elif voter.id not in ctx.voice_state.skip_votes:
-            ctx.voice_state.skip_votes.add(voter.id)
-            total_votes = len(ctx.voice_state.skip_votes)
-            if ctx.author.voice is None or voter.id in ids_in_vc:
-                ctx.send("You're not in a vc.")
+
+        voter = ctx.author
+        ids_in_vc = list(ctx.author.voice.channel.voice_states.keys())  # type: ignore
+        if self.voteskip.requester_autoskip and voter == ctx.voice_state.current.requester:  # type: ignore
+            if ctx.message is not None:
+                await ctx.message.add_reaction("⏭")
+            ctx.voice_state.skip()  # type: ignore
+        elif voter.id not in ctx.voice_state.skip_votes:  # type: ignore
+            ctx.voice_state.skip_votes.add(voter.id)  # type: ignore
+            total_votes = len(ctx.voice_state.skip_votes)  # type: ignore
+            if ctx.author.voice is None or voter.id in ids_in_vc:  # type: ignore
+                await ctx.send("You're not in a vc.")
             members = list(
-                filter(lambda x: x is not None and not x.bot, map(ctx.guild.get_member, ids_in_vc))
+                filter(lambda x: x is not None and not x.bot, map(ctx.guild.get_member, ids_in_vc))  # type: ignore
             )
             if self.voteskip.exclude_idle:
                 members = [member for member in members if member.status != "idle"]
             votes_needed = math.ceil(self.voteskip.fraction * len(members))
             if total_votes >= votes_needed:
-                await ctx.message.add_reaction("⏭")
-                ctx.voice_state.skip()
+                if ctx.message is not None:
+                    await ctx.message.add_reaction("⏭")
+                ctx.voice_state.skip()  # type: ignore
             else:
                 await ctx.send(
-                    embed=self.voteskip_embed(members, ctx.voice_state.skip_votes, votes_needed),
+                    embed=self.voteskip_embed(members, ctx.voice_state.skip_votes, votes_needed),  # type: ignore
                     delete_after=60 * 10,
                 )
         else:
@@ -597,56 +608,60 @@ class Music(commands.Cog):
 
         You can optionally specify the page to show. Each page contains 10 elements.
         """
-        if len(ctx.voice_state.songs) == 0:
+        if len(ctx.voice_state.songs) == 0:  # type: ignore
             return await ctx.send("Empty queue.")
         items_per_page = 10
-        pages = math.ceil(len(ctx.voice_state.songs) / items_per_page)
+        pages = math.ceil(len(ctx.voice_state.songs) / items_per_page)  # type: ignore
         start = (page - 1) * items_per_page
         end = start + items_per_page
         queue = ""
-        for i, song in enumerate(ctx.voice_state.songs[start:end], start=start):
+        for i, song in enumerate(ctx.voice_state.songs[start:end], start=start):  # type: ignore
             if not inspect.isawaitable(song):
                 queue += f"`{i + 1}.` [**{song.source.title}**]({song.source.url})\n"
             else:
                 queue += f"`{i + 1}.` Pending...\n"
         embed = discord.Embed(
-            description=f"**{len(ctx.voice_state.songs)} tracks:**\n\n{queue}"
+            description=f"**{len(ctx.voice_state.songs)} tracks:**\n\n{queue}"  # type: ignore
         ).set_footer(text=f"Viewing page {page}/{pages}")
         await ctx.send(embed=embed, delete_after=self.delete_queue)
 
     @commands.command(name="shuffle", aliases=["random"])
     async def _shuffle(self, ctx: commands.Context) -> None:
         """Shuffles the queue."""
-        if len(ctx.voice_state.songs) == 0:
+        if len(ctx.voice_state.songs) == 0:  # type: ignore
             return await ctx.send("Empty queue.")
-        ctx.voice_state.songs.shuffle()
-        await ctx.message.add_reaction("✅")
+        ctx.voice_state.songs.shuffle()  # type: ignore
+        if ctx.message is not None:
+            await ctx.message.add_reaction("✅")
 
     @commands.command(name="remove", aliases=["rm"])
     async def _remove(self, ctx: commands.Context, index: int) -> None:
         """Removes a song from the queue at a given index."""
-        if len(ctx.voice_state.songs) == 0:
+        if len(ctx.voice_state.songs) == 0:  # type: ignore
             return await ctx.send("Empty queue.")
-        ctx.voice_state.songs.remove(index - 1)
-        await ctx.message.add_reaction("✅")
+        ctx.voice_state.songs.remove(index - 1)  # type: ignore
+        if ctx.message is not None:
+            await ctx.message.add_reaction("✅")
 
     @commands.command(name="loop")
     async def _loop(self, ctx: commands.Context) -> None:
         """Toggle whether to loop the currently playing song."""
-        if not ctx.voice_state.is_playing:
+        if not ctx.voice_state.is_playing:  # type: ignore
             return await ctx.send("Nothing being played at the moment.")
         # Inverse boolean value to loop and unloop.
-        ctx.voice_state.loop = not ctx.voice_state.loop
-        await ctx.message.add_reaction("✅")
+        ctx.voice_state.loop = not ctx.voice_state.loop  # type: ignore
+        if ctx.message is not None:
+            await ctx.message.add_reaction("✅")
 
     @commands.command(name="loopqueue", aliases=["lq"])
     async def _loopqueue(self, ctx: commands.Context) -> None:
         """Toggle whether to loop the queue."""
-        if not ctx.voice_state.is_playing:
+        if not ctx.voice_state.is_playing:  # type: ignore
             return await ctx.send("Nothing being played at the moment.")
         # Inverse boolean value to loop and unloop.
-        ctx.voice_state.loopqueue = not ctx.voice_state.loopqueue
-        await ctx.message.add_reaction("✅")
+        ctx.voice_state.loopqueue = not ctx.voice_state.loopqueue  # type: ignore
+        if ctx.message is not None:
+            await ctx.message.add_reaction("✅")
 
     @commands.command(name="play", aliases=["p"])
     async def _play(self, ctx: commands.Context, *, search: str) -> None:
@@ -658,7 +673,7 @@ class Music(commands.Cog):
         This command automatically searches from various sites if no URL is provided.
         A list of these sites can be found here: https://rg3.github.io/youtube-dl/supportedsites.html
         """
-        if not ctx.voice_state.voice:
+        if not ctx.voice_state.voice:  # type: ignore
             await ctx.invoke(self._join)
         async with ctx.typing():
             try:
@@ -674,14 +689,14 @@ class Music(commands.Cog):
             else:
                 for future in futures:
                     song = Song.create_pending(future)
-                    await ctx.voice_state.songs.put(song)
+                    await ctx.voice_state.songs.put(song)  # type: ignore
                 await ctx.invoke(self._queue)
 
     @_join.before_invoke
     @_play.before_invoke
     async def ensure_voice_state(self, ctx: commands.Context) -> None:
-        if not ctx.author.voice or not ctx.author.voice.channel:
+        if not ctx.author.voice or not ctx.author.voice.channel:  # type: ignore
             raise commands.CommandError("You are not connected to any voice channel.")
         if ctx.voice_client:
-            if ctx.voice_client.channel != ctx.author.voice.channel:
+            if ctx.voice_client.channel != ctx.author.voice.channel:  # type: ignore
                 raise commands.CommandError("Bot is already in a voice channel.")
