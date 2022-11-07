@@ -256,7 +256,7 @@ class Song:
                 color=discord.Color.blurple(),
             )
             .add_field(name="Duration", value=self.source.duration_str)
-            .add_field(name="Requested by", value=self.requester.mention)  # type:ignore
+            .add_field(name="Requested by", value=self.requester.mention)  # type: ignore
             .add_field(
                 name="Uploader", value=f"[{self.source.uploader}]({self.source.uploader_url})"
             )
@@ -309,6 +309,13 @@ class SongQueue(asyncio.Queue):
 
     def remove(self, index: int) -> None:
         del self._queue[index]  # type: ignore
+        self.songs_modified.set()
+
+    def move(self, index_from, index_to) -> None:
+        self._queue[index_to:index_to] = self._queue[index_from]  # type: ignore
+        if index_to < index_from:
+            index_from += 1
+        del self._queue[index_from]  # type: ignore
         self.songs_modified.set()
 
     async def lazy_load_task(self) -> None:
@@ -399,6 +406,7 @@ class VoiceState:
                     return
             if self.current is not None:
                 self.current.source.volume = self._volume
+                self.skip_votes.clear()
                 if self.voice is not None:
                     self.voice.play(self.current.source, after=self.play_next_song)
                 if msg is not None:
@@ -691,6 +699,14 @@ class Music(commands.Cog):
                     song = Song.create_pending(future)
                     await ctx.voice_state.songs.put(song)  # type: ignore
                 await ctx.invoke(self._queue)
+
+    @commands.command(name="move", aliases=["m", "mv"])
+    async def _move(self, ctx: commands.Context, index_from: int, index_to: int):
+        """Moves a song from the queue at a given index to a given index."""
+        if index_to != index_from:
+            ctx.voice_state.songs.move(index_from - 1, index_to - 1)  # type: ignore
+        if ctx.message is not None:
+            await ctx.message.add_reaction("✅")
 
     @_join.before_invoke
     @_play.before_invoke
