@@ -311,8 +311,8 @@ class SongQueue(asyncio.Queue):
         del self._queue[index]  # type: ignore
         self.songs_modified.set()
 
-    def move(self, index_from, index_to) -> None:
-        self[index_to:index_to] = [self._queue[index_from]]  # type: ignore
+    def move(self, index_from: int, index_to: int) -> None:
+        self._queue.insert(index_to, self._queue[index_from])  # type: ignore
         if index_to < index_from:
             index_from += 1
         del self._queue[index_from]  # type: ignore
