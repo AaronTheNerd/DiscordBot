@@ -17,7 +17,7 @@ pip install -U discord.py pynacl youtube-dl
 
 You also need FFmpeg in your PATH environment variable or the FFmpeg.exe binary in your bot's directory on Windows.
 ================================================================================
-Modified by Aaron Barge 2021
+Modified by Aaron Barge 2021-2022
 
 Requirements:
 

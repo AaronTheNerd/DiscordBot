@@ -50,7 +50,9 @@ class Search:
             api = SpotifyAPI(CONFIGS.spotify.client_id, CONFIGS.spotify.client_secret)
             if path[1] == "track":
                 t_resp: TrackResponse = api.get_track(path[2])
-                self.set_attrs([f"{t_resp.name} by {t_resp.artists[0]['name']} lyrics"], False, False)
+                self.set_attrs(
+                    [f"{t_resp.name} by {t_resp.artists[0]['name']} lyrics"], False, False
+                )
             elif path[1] == "playlist":
                 pl_resp: PlaylistResponse = api.get_playlist(path[2])
                 self.set_attrs(

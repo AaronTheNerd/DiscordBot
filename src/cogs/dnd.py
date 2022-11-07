@@ -1,3 +1,8 @@
+"""A module for the DnD cog of the bot.
+
+Written by Aaron Barge
+Copyright 2022
+"""
 import random
 
 from discord.ext import commands

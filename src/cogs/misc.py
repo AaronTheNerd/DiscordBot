@@ -1,3 +1,8 @@
+"""A module for the miscellaneous cog of the bot.
+
+Written by Aaron Barge
+Copyright 2022
+"""
 import randfacts
 from discord.ext import commands
 

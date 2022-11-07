@@ -1,8 +1,14 @@
-from dataclasses import dataclass, field
+"""A module for the event-based cog of the bot.
+
+Written by Aaron Barge
+Copyright 2022
+"""
 import random
+from dataclasses import dataclass, field
 from typing import Any, Dict, List
-from discord.ext import commands
+
 import discord
+from discord.ext import commands
 
 
 @dataclass
@@ -34,10 +40,10 @@ class EventsCog(commands.Cog, name="Events"):
         print(f"Logged in as: {self.bot.user}")
 
     @commands.Cog.listener()
-    async def on_member_join(self, ctx: commands.Context) -> None:
+    async def on_member_join(self, ctx: commands.Context, member: discord.Member) -> None:
         if self.role.enabled:
-            role = discord.utils.get(ctx.guild.roles, name=self.role.role)
-            await ctx.author.add_roles(role)
+            role = discord.utils.get(ctx.guild.roles, name=self.role.role)  # type: ignore
+            await member.add_roles(role)
 
     @commands.Cog.listener()
     async def on_command(self, ctx: commands.Context) -> None:
