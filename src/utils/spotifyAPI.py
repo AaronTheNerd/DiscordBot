@@ -22,6 +22,7 @@ class AlbumResponse:
     release_date: str
     release_date_precision: str
     total_tracks: int
+    track: Any
     tracks: Dict[str, Any]
     type: str
     uri: str
