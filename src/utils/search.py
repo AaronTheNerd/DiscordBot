@@ -67,7 +67,7 @@ class Search:
                 a_resp: AlbumResponse = api.get_album(path[2])
                 self.set_attrs(
                     [
-                        f"{track['track']['name']} by {track['track']['artists'][0]['name']} lyrics"
+                        f"{track['name']} by {track['artists'][0]['name']} lyrics"
                         for track in a_resp.tracks["items"]
                     ],
                     False,
