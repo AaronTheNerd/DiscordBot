@@ -3,7 +3,7 @@ from typing import Dict, List
 from urllib.parse import ParseResult, parse_qsl, urlparse
 
 from configs import CONFIGS
-from utils.spotifyAPI import PlaylistResponse, SpotifyAPI, TrackResponse
+from utils.spotifyAPI import AlbumResponse, PlaylistResponse, SpotifyAPI, TrackResponse
 
 
 @dataclass
@@ -62,6 +62,16 @@ class Search:
                     ],
                     False,
                     False,
+                )
+            elif path[1] == "album":
+                a_resp: AlbumResponse = api.get_album(path[2])
+                self.set_attrs(
+                    [
+                        f"{track['track']['name']} by {track['track']['artists'][0]['name']} lyrics"
+                        for track in a_resp.tracks["items"]
+                    ],
+                    False,
+                    False
                 )
 
 

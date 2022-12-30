@@ -5,6 +5,28 @@ import requests
 
 
 @dataclass
+class AlbumResponse:
+    album_type: str
+    artists: List[Dict[str, Any]]
+    copyrights: List[Dict[str, Any]]
+    external_ids: Dict[str, Any]
+    external_urls: Dict[str, Any]
+    genres: List[Any]
+    href: str
+    id: str
+    images: List[Dict[str, Any]]
+    label: str
+    name: str
+    popularity: int
+    release_date: str
+    release_date_precision: str
+    total_tracks: int
+    tracks: Dict[str, Any]
+    type: str
+    uri: str
+
+
+@dataclass
 class TrackResponse:
     album: Dict[str, Any]
     artists: List[Dict[str, Any]]
@@ -66,4 +88,9 @@ class SpotifyAPI:
     def get_playlist(self, id: str) -> PlaylistResponse:
         return PlaylistResponse(
             **requests.get(f"{self.base_url}/playlists/{id}", headers=self._headers).json()
+        )
+
+    def get_album(self, id: str) -> AlbumResponse:
+        return AlbumResponse(
+            **requests.get(f"{self.base_url}/albums/{id}", headers=self._headers).json()
         )
