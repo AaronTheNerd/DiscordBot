@@ -1,73 +1,22 @@
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import requests
 
 
-@dataclass
 class AlbumResponse:
-    album_type: str
-    artists: List[Dict[str, Any]]
-    available_markets: List[str]
-    copyrights: List[Dict[str, Any]]
-    external_ids: Dict[str, Any]
-    external_urls: Dict[str, Any]
-    genres: List[Any]
-    href: str
-    id: str
-    images: List[Dict[str, Any]]
-    label: str
-    name: str
-    popularity: int
-    release_date: str
-    release_date_precision: str
-    total_tracks: int
-    track: Any
-    tracks: Dict[str, Any]
-    type: str
-    uri: str
+    def __init__(self, tracks: Dict[str, Any], *args, **kwargs) -> None:
+        self.tracks = tracks
 
 
-@dataclass
 class TrackResponse:
-    album: Dict[str, Any]
-    artists: List[Dict[str, Any]]
-    available_markets: List[str]
-    disc_number: int
-    duration_ms: int
-    explicit: bool
-    external_ids: Any
-    external_urls: Dict[str, Any]
-    href: str
-    id: str
-    is_local: bool
-    name: str
-    popularity: int
-    preview_url: str
-    track_number: int
-    type: str
-    uri: str
-    is_playable: bool = field(default=False)
-    linked_from: Dict[str, Any] = field(default_factory=dict)
+    def __init__(self, name: str, artists: List[Dict[str, Any]], *args, **kwargs) -> None:
+        self.name = name
+        self.artists = artists
 
 
-@dataclass
 class PlaylistResponse:
-    collaborative: bool
-    description: str
-    external_urls: Dict[str, Any]
-    followers: Dict[str, Any]
-    href: str
-    id: str
-    images: List[Dict[str, Any]]
-    name: str
-    owner: Dict[str, Any]
-    primary_color: Any
-    public: bool
-    snapshot_id: str
-    tracks: Dict[str, Any]
-    type: str
-    uri: str
+    def __init__(self, tracks: Dict[str, Any], *args, **kwargs) -> None:
+        self.tracks = tracks
 
 
 class SpotifyAPI:
