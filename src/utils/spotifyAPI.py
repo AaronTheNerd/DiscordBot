@@ -8,6 +8,7 @@ import requests
 class AlbumResponse:
     album_type: str
     artists: List[Dict[str, Any]]
+    available_markets: List[str]
     copyrights: List[Dict[str, Any]]
     external_ids: Dict[str, Any]
     external_urls: Dict[str, Any]
