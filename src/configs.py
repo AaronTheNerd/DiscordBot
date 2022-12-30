@@ -1,7 +1,7 @@
 import json
 import os
 from dataclasses import dataclass, field, fields, is_dataclass
-from typing import Any, TypeVar, Dict, Type
+from typing import Any, Dict, Type, TypeVar
 
 
 @dataclass(frozen=True)
@@ -21,12 +21,13 @@ class AvailableCogs:
 @dataclass(frozen=True)
 class SpotifyAuthConfigs:
     client_id: str
-    client_secret: str
+    client_secret: str = field(repr=False)
 
 
 @dataclass(frozen=True)
 class Configs:
-    token: str
+    token: str = field(repr=False)
+    dev_id: int = field(repr=False)
     command_prefix: str
     case_insensitive: bool
     spotify: SpotifyAuthConfigs

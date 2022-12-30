@@ -10,6 +10,8 @@ from typing import Any, Dict, List
 import discord
 from discord.ext import commands
 
+from utils.error import on_error
+
 
 @dataclass
 class RoleOnJoin:
@@ -55,4 +57,4 @@ class EventsCog(commands.Cog, name="Events"):
             await ctx.send(insult, delete_after=self.insult.delete_after)
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
-        await ctx.send(f"An error occurred: {str(error)}")
+        await on_error(ctx, error, self.bot)

@@ -6,6 +6,7 @@ Copyright 2022
 import random
 
 from discord.ext import commands
+from utils.error import on_error
 
 
 class DnDCog(commands.Cog, name="DnD"):
@@ -73,4 +74,4 @@ class DnDCog(commands.Cog, name="DnD"):
         await ctx.send(f"Rolled with Disadvantage: {roll}")
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
-        await ctx.send(f"An error occurred: {str(error)}")
+        await on_error(ctx, error, None)

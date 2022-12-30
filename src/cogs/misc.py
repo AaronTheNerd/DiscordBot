@@ -6,6 +6,8 @@ Copyright 2022
 import randfacts
 from discord.ext import commands
 
+from utils.error import on_error
+
 
 class MiscCog(commands.Cog, name="Miscellaneous"):
     def __init__(self, bot: commands.Bot) -> None:
@@ -25,4 +27,4 @@ class MiscCog(commands.Cog, name="Miscellaneous"):
         await ctx.send(f"Pong! {round(self.bot.latency * 1000)}")
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
-        await ctx.send(f"An error occurred: {str(error)}")
+        await on_error(ctx, error, self.bot)

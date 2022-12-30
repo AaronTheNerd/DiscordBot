@@ -50,7 +50,6 @@ import itertools
 import math
 import random
 from dataclasses import dataclass
-from traceback import TracebackException
 from typing import Any, Awaitable, Coroutine, Dict, List, Optional, Set
 
 import discord
@@ -58,6 +57,7 @@ import youtube_dl
 from discord.ext import commands
 
 from utils.search import Search
+from utils.error import on_error
 
 # Silence useless bug reports messages
 youtube_dl.utils.bug_reports_message = lambda: ""
@@ -489,9 +489,7 @@ class Music(commands.Cog):
         ctx.voice_state = self.get_voice_state(ctx)  # type: ignore
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
-        await ctx.send(
-            f"An error occurred: {''.join(TracebackException.from_exception(error).format())}"
-        )
+        await on_error(ctx, error, self.bot)
 
     @commands.command(name="join", aliases=["summon"], invoke_without_subcommand=True)
     async def _join(self, ctx: commands.Context) -> None:
@@ -625,9 +623,10 @@ class Music(commands.Cog):
         queue = ""
         for i, song in enumerate(ctx.voice_state.songs[start:end], start=start):  # type: ignore
             if not inspect.isawaitable(song):
-                queue += f"`{i + 1}.` [**{song.source.title}**]({song.source.url})\n"
+                queue += f"`{i + 1}.` [**{song.source.title}**]({song.source.url})"
             else:
-                queue += f"`{i + 1}.` Pending...\n"
+                queue += f"`{i + 1}.` Pending..."
+            queue += "\n"
         embed = discord.Embed(
             description=f"**{len(ctx.voice_state.songs)} tracks:**\n\n{queue}"  # type: ignore
         ).set_footer(text=f"Viewing page {page}/{pages}")
