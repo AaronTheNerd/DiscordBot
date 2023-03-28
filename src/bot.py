@@ -21,33 +21,34 @@ Permission Integer: 305155152
 import discord
 from discord.ext import commands
 
-from cogs.dnd import DnDCog
-from cogs.events import EventsCog
-from cogs.misc import MiscCog
-from cogs.youtube import Music
 from configs import CONFIGS
 
+class CustomBot(commands.Bot):
+    def __init__(self) -> None:
+        super().__init__(
+            command_prefix=CONFIGS.command_prefix,
+            intents=discord.Intents.all(),
+            application_id=CONFIGS.app_id,
+            case_insensitive=CONFIGS.case_insensitive
+        )
 
-def main() -> None:
+    async def setup_hook(self) -> None:
+        if CONFIGS.cogs.misc.enabled:
+            await self.load_extension("cogs.misc")
 
-    intents = discord.Intents.default()
-    intents.members = True
-    
-    bot = commands.Bot(command_prefix=CONFIGS.command_prefix, case_insensitive=CONFIGS.case_insensitive, intents=intents)
+        if CONFIGS.cogs.events.enabled:
+            await self.load_extension("cogs.events")
 
-    if CONFIGS.cogs.misc.enabled:
-        bot.add_cog(MiscCog(bot, **CONFIGS.cogs.misc.kwargs))
+        if CONFIGS.cogs.youtube.enabled:
+            await self.load_extension("cogs.youtube")
 
-    if CONFIGS.cogs.events.enabled:
-        bot.add_cog(EventsCog(bot, **CONFIGS.cogs.events.kwargs))
+        if CONFIGS.cogs.dnd.enabled:
+            await self.load_extension("cogs.dnd")
 
-    if CONFIGS.cogs.youtube.enabled:
-        bot.add_cog(Music(bot, **CONFIGS.cogs.youtube.kwargs))
+        await bot.tree.sync(guild=discord.Object(id=CONFIGS.guild_id))
 
-    if CONFIGS.cogs.dnd.enabled:
-        bot.add_cog(DnDCog(**CONFIGS.cogs.dnd.kwargs))
+    async def on_ready(self) -> None:
+        print(f"{self.user} has logged in")
 
-    bot.run(CONFIGS.token)
-
-if __name__ == "__main__":
-    main()
+bot = CustomBot()
+bot.run(CONFIGS.token)
