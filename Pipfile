@@ -10,6 +10,7 @@ httpx = "*"
 beautifulsoup4 = "*"
 pynacl = "*"
 "discord.py" = {version = "==2.2.2", extras = ["voice"]}
+requests = "*"
 
 [dev-packages]
 
