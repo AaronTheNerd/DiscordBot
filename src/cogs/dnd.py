@@ -100,9 +100,9 @@ class DnDCog(commands.Cog):
         description="Rolls with advantage."
     )
     @app_commands.choices(sides = DICE_CHOICES)
-    async def _rolldis(self, interaction: discord.Interaction, num_of_sides: int) -> None:
+    async def _rolldis(self, interaction: discord.Interaction, sides: int) -> None:
         """Rolls with disadvantage."""
-        roll1, roll2 = random.randint(1, num_of_sides), random.randint(1, num_of_sides)
+        roll1, roll2 = random.randint(1, sides), random.randint(1, sides)
         roll = roll1 if roll1 < roll2 else roll2
         await interaction.response.send_message(f"Rolled with Disadvantage: {roll}")
 
