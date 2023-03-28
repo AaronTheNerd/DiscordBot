@@ -4,27 +4,43 @@ Written by Aaron Barge
 Copyright 2022
 """
 import randfacts
+import discord
+from discord import app_commands
 from discord.ext import commands
-
+from configs import CONFIGS
 from utils.error import on_error
 
 
-class MiscCog(commands.Cog, name="Miscellaneous"):
+class MiscCog(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
-    @commands.command(name="hello", aliases=["hey", "howdy"])
-    async def _hello(self, ctx: commands.Context) -> None:
-        await ctx.send(f"Hello, {ctx.author}!")
+    @app_commands.command(
+        name="hello",
+        description="Hello World!"
+    )
+    async def _hello(self, interaction: discord.Interaction) -> None:
+        await interaction.response.send_message(f"Hello, {interaction.user}!")
 
-    @commands.command(name="fact", aliases=["randfact", "rf"])
-    async def _fact(self, ctx: commands.Context) -> None:
-        """Gives a random fact."""
-        await ctx.send(f"Did you know?\n{randfacts.get_fact()}")
+    @app_commands.command(
+        name="fact",
+        description="Gives a random fact."
+    )
+    async def _fact(self, interaction: discord.Interaction) -> None:
+        await interaction.response.send_message(f"Did you know?\n{randfacts.get_fact()}")
 
-    @commands.command(name="ping")
-    async def _ping(self, ctx: commands.Context) -> None:
-        await ctx.send(f"Pong! {round(self.bot.latency * 1000)}")
+    @app_commands.command(
+        name="ping",
+        description="Ping!"
+    )
+    async def _ping(self, interaction: discord.Interaction) -> None:
+        await interaction.response.pong()
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
         await on_error(ctx, error, self.bot)
+
+async def setup(bot: commands.Bot) -> None:
+    await bot.add_cog(
+        MiscCog(bot, **CONFIGS.cogs.misc.kwargs),
+        guilds=[discord.Object(id=CONFIGS.guild_id)]
+    )
