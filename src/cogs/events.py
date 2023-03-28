@@ -10,6 +10,7 @@ from typing import Any, Dict, List
 import discord
 from discord.ext import commands
 
+from configs import CONFIGS
 from utils.error import on_error
 
 
@@ -29,7 +30,7 @@ class RandomInsult:
     insults: List[str]
 
 
-class EventsCog(commands.Cog, name="Events"):
+class EventsCog(commands.Cog):
     def __init__(
         self, bot, role_on_join: Dict[str, Any], random_insult_on_command: Dict[str, Any]
     ) -> None:
@@ -38,14 +39,15 @@ class EventsCog(commands.Cog, name="Events"):
         self.insult = RandomInsult(**random_insult_on_command)
 
     @commands.Cog.listener()
-    async def on_ready(self) -> None:
-        print(f"Logged in as: {self.bot.user}")
-
-    @commands.Cog.listener()
     async def on_member_join(self, ctx: commands.Context, member: discord.Member) -> None:
-        if self.role.enabled:
-            role = discord.utils.get(ctx.guild.roles, name=self.role.role)  # type: ignore
-            await member.add_roles(role)
+        if not ctx.guild:
+            return
+        if not self.role.enabled:
+            return 
+        role = discord.utils.get(ctx.guild.roles, name=self.role.role)
+        if role is None:
+            return
+        await member.add_roles(role)
 
     @commands.Cog.listener()
     async def on_command(self, ctx: commands.Context) -> None:
@@ -58,3 +60,9 @@ class EventsCog(commands.Cog, name="Events"):
 
     async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
         await on_error(ctx, error, self.bot)
+
+async def setup(bot: commands.Bot) -> None:
+    await bot.add_cog(
+        EventsCog(bot, **CONFIGS.cogs.events.kwargs),
+        guilds=[discord.Object(id=CONFIGS.guild_id)]
+    )
