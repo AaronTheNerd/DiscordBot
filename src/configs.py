@@ -27,7 +27,9 @@ class SpotifyAuthConfigs:
 @dataclass(frozen=True)
 class Configs:
     token: str = field(repr=False)
+    app_id: int = field(repr=False)
     dev_id: int = field(repr=False)
+    guild_id: int = field(repr=False)
     command_prefix: str
     case_insensitive: bool
     spotify: SpotifyAuthConfigs
