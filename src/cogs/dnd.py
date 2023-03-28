@@ -32,9 +32,11 @@ class DnDCog(commands.Cog):
         for _ in range(rolls):
             all_rolls.append(random.randint(1, sides))
         rolls_str = f"Rolls: {str(all_rolls)}"
-        if len(rolls_str) < 2000 and rolls != 1:
-            await interaction.response.send_message(rolls_str)
-        await interaction.response.send_message(f"{'Total' if rolls != 1 else 'Rolled'}: {sum(all_rolls)}")
+        total_str = f"{'Total' if rolls != 1 else 'Rolled'}: {sum(all_rolls)}"
+        if len(rolls_str + total_str) < 2000 and rolls != 1:
+            await interaction.response.send_message(f"{rolls_str}\n{total_str}")
+            return
+        await interaction.response.send_message(total_str)
 
     @app_commands.command(
         name="d4",
