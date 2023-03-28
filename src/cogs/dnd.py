@@ -5,12 +5,12 @@ Copyright 2022
 """
 import random
 
-from configs import CONFIGS
-
 import discord
-from discord.ext import commands
 from discord import app_commands
 from discord.app_commands import Choice
+from discord.ext import commands
+
+from configs import CONFIGS
 from utils.error import on_error
 
 DICE_CHOICES = [
