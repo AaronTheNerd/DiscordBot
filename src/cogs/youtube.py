@@ -45,13 +45,12 @@ from __future__ import annotations
 
 import asyncio
 import functools
-import inspect
 import itertools
 import math
 import random
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Coroutine, Dict, List, Optional, Set
+from typing import Any, Awaitable, Optional
 
 import discord
 import youtube_dl
@@ -91,17 +90,16 @@ class YTDLSource(discord.PCMVolumeTransformer):
         "username": "discordchatbot69@gmail.com",
         "password": "~<G>$)9H4yUS<8:}",
     }
-
     FFMPEG_OPTIONS = {
         "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
         "options": "-vn",
     }
-
     ytdl = youtube_dl.YoutubeDL(YTDL_OPTIONS)
 
     def __init__(
         self,
         ctx: commands.Context,
+        search: str,
         source: discord.FFmpegPCMAudio,
         *,
         data: dict,
@@ -109,8 +107,10 @@ class YTDLSource(discord.PCMVolumeTransformer):
     ) -> None:
         super().__init__(source, volume)
 
+        self.ctx = ctx
         self.requester = ctx.author
         self.channel = ctx.channel
+        self.search = search
         self.data = data
 
         self.uploader = data.get("uploader")
@@ -142,7 +142,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         _search: Search,
         *,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-    ) -> List[FutureYTDLSource]:
+    ) -> list[FutureYTDLSource]:
         async def func(
             search: str, loop: Optional[asyncio.AbstractEventLoop], is_url: bool
         ) -> YTDLSource:
@@ -180,7 +180,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
                         info = processed_info["entries"].pop(0)
                     except IndexError:
                         raise YTDLError(f"Couldn't retrieve any matches for `{webpage_url}`")
-            return cls(ctx, discord.FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
+            return cls(ctx, search, discord.FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
 
         return [FutureYTDLSource(search, func(search, loop, _search.is_url)) for search in _search.searches]
 
@@ -191,7 +191,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         _search: Search,
         *,
         loop: Optional[asyncio.AbstractEventLoop] = None,
-    ) -> List[FutureYTDLSource]:
+    ) -> list[FutureYTDLSource]:
         search = _search.searches[0]
         loop = loop or asyncio.get_event_loop()
         partial = functools.partial(cls.ytdl.extract_info, search, download=False, process=False)
@@ -298,7 +298,7 @@ class SongQueue(asyncio.Queue):
     def __post_init__(self) -> None:
         super().__init__()
 
-    def __getitem__(self, item) -> Song | FutureSong | List[Song | FutureSong]:
+    def __getitem__(self, item) -> Song | FutureSong | list[Song | FutureSong]:
         if isinstance(item, slice):
             return list(itertools.islice(self._queue, item.start, item.stop, item.step)) 
         else:
@@ -423,7 +423,9 @@ class VoiceState:
             self.next.clear()
             if not self.loop:
                 if self.loopqueue and self.current is not None:
-                    await self.songs.put(self.current)
+                    remade_current = await self.remake_current()
+                    if remade_current is not None:
+                        await self.songs.put(remade_current)
                 self.current = None
                 try:
                     await asyncio.wait_for(self.get_new_current(), self.cog.disconnect_timeout)
@@ -431,9 +433,9 @@ class VoiceState:
                     self.bot.loop.create_task(self.disconnect())
                     return
             elif self.current is not None:
-                ctx = self._ctx
-                url = Search(self.current.source.stream_url)
-                self.current = await Song.create_pending((await YTDLSource.create_source(ctx, url))[0]).future
+                remade_current = await self.remake_current()
+                if remade_current is not None:
+                    self.current = await remade_current.future
             if self.current is not None:
                 self.current.source.volume = self._volume
                 self.skip_votes.clear()
@@ -451,6 +453,12 @@ class VoiceState:
                     )
                 )
                 await self.next.wait()
+
+    async def remake_current(self) -> FutureSong | None:
+        if self.current is None: return
+        ctx = self.current.source.ctx
+        url = Search(self.current.source.search)
+        return Song.create_pending((await YTDLSource.create_source(ctx, url))[0])
 
     def play_next_song(self, error: Optional[Exception] = None) -> None:
         if error:
@@ -488,7 +496,7 @@ class Music(commands.Cog):
     def __init__(
         self,
         bot: commands.Bot,
-        voteskip: Dict[str, Any],
+        voteskip: dict[str, Any],
         disconnect_timeout: int,
         lazy_load: int,
         max_lazy_load: int,
@@ -593,7 +601,7 @@ class Music(commands.Cog):
 
     @staticmethod
     def voteskip_embed(
-        members: List[discord.Member], skip_votes: Set[int], votes_needed: int
+        members: list[discord.Member], skip_votes: set[int], votes_needed: int
     ) -> discord.Embed:
         description = ""
         for member in members:
