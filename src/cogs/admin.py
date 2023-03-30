@@ -16,8 +16,8 @@ class AdminCog(commands.Cog, name="AdminsOnly"):
     @commands.has_permissions(administrator=True)
     async def _shutdown(self, ctx: commands.Context) -> None:
         for vc in self.bot.voice_clients:
-            await vc.disconnect()
-        await self.bot.logout()
+            await vc.disconnect(force=True)
+        await self.bot.close()
 
     async def cog_command_error(
         self, ctx: commands.Context, error: commands.CommandError
