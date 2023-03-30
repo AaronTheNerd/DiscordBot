@@ -4,13 +4,15 @@ Written by Aaron Barge
 Copyright 2022
 """
 import random
+from dataclasses import dataclass
 
 import discord
 from discord import app_commands
 from discord.app_commands import Choice
 from discord.ext import commands
 
-from configs import CONFIGS
+from cog import BoundCog
+from configs import CONFIGS, BindingConfig
 from utils.error import on_error
 
 DICE_CHOICES = [
@@ -24,9 +26,13 @@ DICE_CHOICES = [
 ]
 
 
-class DnDCog(commands.Cog):
-    def __init__(self) -> None:
-        pass
+@dataclass
+class DnDCog(BoundCog):
+    bot: commands.Bot
+    binding: BindingConfig
+    
+    def __post_init__(self) -> None:
+        super().__init__(self.bot, self.binding)
 
     async def _roll(
         self, interaction: discord.Interaction, sides: int, rolls: int = 1
@@ -92,5 +98,5 @@ class DnDCog(commands.Cog):
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(
-        DnDCog(**CONFIGS.cogs.dnd.kwargs), guilds=[discord.Object(id=CONFIGS.guild_id)]
+        DnDCog(bot, CONFIGS.cogs.dnd.binding, **CONFIGS.cogs.dnd.kwargs), guilds=[discord.Object(id=CONFIGS.guild_id)]
     )

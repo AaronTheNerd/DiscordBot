@@ -5,8 +5,14 @@ from typing import Any, Type, TypeVar
 
 
 @dataclass(frozen=True)
+class BindingConfig:
+    enabled: bool
+    channel_id: int = field(default=-1)
+
+@dataclass(frozen=True)
 class CogConfig:
     enabled: bool
+    binding: BindingConfig
     kwargs: dict[str, Any] = field(default_factory=dict)
 
 

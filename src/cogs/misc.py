@@ -8,13 +8,14 @@ import randfacts
 from discord import app_commands
 from discord.ext import commands
 
-from configs import CONFIGS
+from cog import BoundCog
+from configs import CONFIGS, BindingConfig
 from utils.error import on_error
 
 
-class MiscCog(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
+class MiscCog(BoundCog):
+    def __init__(self, bot: commands.Bot, binding: BindingConfig) -> None:
+        super().__init__(bot, binding)
 
     @app_commands.command(name="hello", description="Hello World!")
     async def _hello(self, interaction: discord.Interaction) -> None:
@@ -38,6 +39,6 @@ class MiscCog(commands.Cog):
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(
-        MiscCog(bot, **CONFIGS.cogs.misc.kwargs),
+        MiscCog(bot, CONFIGS.cogs.misc.binding, **CONFIGS.cogs.misc.kwargs),
         guilds=[discord.Object(id=CONFIGS.guild_id)],
     )

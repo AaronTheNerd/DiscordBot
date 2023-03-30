@@ -56,7 +56,8 @@ import discord
 import youtube_dl
 from discord.ext import commands
 
-from configs import CONFIGS
+from cog import BoundCog
+from configs import CONFIGS, BindingConfig
 from utils.error import on_error
 from utils.search import Search
 
@@ -528,23 +529,21 @@ class VoteSkipConfigs:
     fraction: float
 
 
-class Music(commands.Cog):
-    def __init__(
-        self,
-        bot: commands.Bot,
-        voteskip: dict[str, Any],
-        disconnect_timeout: int,
-        lazy_load: int,
-        max_lazy_load: int,
-        delete_queue: int,
-    ) -> None:
-        self.bot: commands.Bot = bot
-        self.voice_state: Optional[VoiceState] = None
-        self.voteskip: VoteSkipConfigs = VoteSkipConfigs(**voteskip)
-        self.disconnect_timeout: int = disconnect_timeout
-        self.lazy_load: int = lazy_load
-        self.max_lazy_load: int = max_lazy_load
-        self.delete_queue: int = delete_queue
+@dataclass
+class Music(BoundCog):
+    bot: commands.Bot
+    binding: BindingConfig
+    voteskip: dict[str, Any]
+    disconnect_timeout: int
+    lazy_load: int
+    max_lazy_load: int
+    delete_queue: int
+    voice_state: Optional[VoiceState] = None
+    parsed_voteskip: VoteSkipConfigs = field(init=False)
+
+    def __post_init__(self) -> None:
+        super().__init__(self.bot, self.binding)
+        self.parsed_voteskip: VoteSkipConfigs = VoteSkipConfigs(**self.voteskip)
 
     def cog_unload(self) -> None:
         if self.voice_state is None:
@@ -559,6 +558,7 @@ class Music(commands.Cog):
         return True
 
     async def cog_before_invoke(self, ctx: commands.Context) -> None:
+        await super().cog_before_invoke(ctx)
         if self.voice_state is None:
             self.voice_state = VoiceState(self.bot, self, ctx)
 
@@ -689,7 +689,7 @@ class Music(commands.Cog):
         voter = ctx.author
         ids_in_vc = list(ctx.author.voice.channel.voice_states.keys())
         if (
-            self.voteskip.requester_autoskip
+            self.parsed_voteskip.requester_autoskip
             and voter == self.voice_state.current.requester
         ):
             if ctx.message is not None:
@@ -708,9 +708,9 @@ class Music(commands.Cog):
                     map(ctx.guild.get_member, ids_in_vc),
                 )
             )
-            if self.voteskip.exclude_idle:
+            if self.parsed_voteskip.exclude_idle:
                 members = [member for member in members if member.status != "idle"]
-            votes_needed = math.ceil(self.voteskip.fraction * len(members))
+            votes_needed = math.ceil(self.parsed_voteskip.fraction * len(members))
             if total_votes >= votes_needed:
                 if ctx.message is not None:
                     await ctx.message.add_reaction("⏭")
@@ -857,6 +857,6 @@ class Music(commands.Cog):
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(
-        Music(bot, **CONFIGS.cogs.youtube.kwargs),
+        Music(bot, CONFIGS.cogs.youtube.binding, **CONFIGS.cogs.youtube.kwargs),
         guilds=[discord.Object(id=CONFIGS.guild_id)],
     )
