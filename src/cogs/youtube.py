@@ -98,7 +98,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
     def __init__(
         self,
-        ctx: commands.Context,
+        requester: discord.User | discord.Member,
+        channel: discord.abc.MessageableChannel,
         search: str,
         source: discord.FFmpegPCMAudio,
         *,
@@ -107,9 +108,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
     ) -> None:
         super().__init__(source, volume)
 
-        self.ctx = ctx
-        self.requester = ctx.author
-        self.channel = ctx.channel
+        self.requester = requester
+        self.channel = channel
         self.search = search
         self.data = data
 
@@ -138,7 +138,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def create_source(
         cls,
-        ctx: commands.Context,
+        requester: discord.User | discord.Member,
+        channel: discord.abc.MessageableChannel,
         _search: Search,
         *,
         loop: Optional[asyncio.AbstractEventLoop] = None,
@@ -187,7 +188,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
                             f"Couldn't retrieve any matches for `{webpage_url}`"
                         )
             return cls(
-                ctx,
+                requester,
+                channel,
                 search,
                 discord.FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS),
                 data=info,
@@ -201,7 +203,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def create_source_playlist(
         cls,
-        ctx: commands.Context,
+        requester: discord.User | discord.Member,
+        channel: discord.abc.MessageableChannel,
         _search: Search,
         *,
         loop: Optional[asyncio.AbstractEventLoop] = None,
@@ -229,7 +232,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
         for entry in entries:
             try:
                 coroutines += await cls.create_source(
-                    ctx,
+                    requester,
+                    channel,
                     Search(f"https://www.youtube.com/watch?v={entry['url']}"),
                     loop=loop,
                 )
@@ -485,9 +489,10 @@ class VoiceState:
     async def remake_current(self) -> FutureSong | None:
         if self.current is None:
             return
-        ctx = self.current.source.ctx
+        requester = self.current.source.requester
+        channel = self.current.source.channel
         url = Search(self.current.source.search)
-        return Song.create_pending((await YTDLSource.create_source(ctx, url))[0])
+        return Song.create_pending((await YTDLSource.create_source(requester, channel, url))[0])
 
     def play_next_song(self, error: Optional[Exception] = None) -> None:
         if error:
@@ -812,11 +817,11 @@ class Music(commands.Cog):
                 _search = Search(search)
                 if _search.playlist:
                     futures = await YTDLSource.create_source_playlist(
-                        ctx, _search, loop=self.bot.loop
+                        ctx.author, ctx.channel, _search, loop=self.bot.loop
                     )
                 else:
                     futures = await YTDLSource.create_source(
-                        ctx, _search, loop=self.bot.loop
+                        ctx.author, ctx.channel, _search, loop=self.bot.loop
                     )
             except Exception as e:
                 raise commands.CommandError(
