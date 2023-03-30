@@ -4,7 +4,7 @@ from typing import Optional
 from configs import CONFIGS
 
 async def on_error(
-    ctx: commands.Context, err: commands.CommandError, bot: Optional[commands.Bot]
+    ctx: commands.Context, err: Exception, bot: Optional[commands.Bot]
 ) -> None:
     await ctx.send(f"**[ERROR]** {err}")
     if bot is None:
