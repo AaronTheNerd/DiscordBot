@@ -1,6 +1,8 @@
-from discord.ext import commands
 from traceback import TracebackException
 from typing import Optional
+
+from discord.ext import commands
+
 from configs import CONFIGS
 
 

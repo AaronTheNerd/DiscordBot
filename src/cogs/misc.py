@@ -3,10 +3,11 @@
 Written by Aaron Barge
 Copyright 2022
 """
-import randfacts
 import discord
+import randfacts
 from discord import app_commands
 from discord.ext import commands
+
 from configs import CONFIGS
 from utils.error import on_error
 

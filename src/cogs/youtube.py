@@ -55,10 +55,10 @@ from typing import Any, Awaitable, Optional
 import discord
 import youtube_dl
 from discord.ext import commands
-from configs import CONFIGS
 
-from utils.search import Search
+from configs import CONFIGS
 from utils.error import on_error
+from utils.search import Search
 
 # Silence useless bug reports messages
 youtube_dl.utils.bug_reports_message = lambda: ""
