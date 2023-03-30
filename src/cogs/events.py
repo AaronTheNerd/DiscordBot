@@ -60,7 +60,10 @@ class EventsCog(BoundCog):
 
     @commands.Cog.listener()
     async def on_command(self, ctx: commands.Context) -> None:
-        if self.parsed_insult.enabled and random.random() < self.parsed_insult.insult_chance:
+        if (
+            self.parsed_insult.enabled
+            and random.random() < self.parsed_insult.insult_chance
+        ):
             insult = f"You're a "
             if random.random() < self.parsed_insult.adjective_chance:
                 insult += random.choice(self.parsed_insult.adjectives) + ", "

@@ -30,7 +30,7 @@ DICE_CHOICES = [
 class DnDCog(BoundCog):
     bot: commands.Bot
     binding: BindingConfig
-    
+
     def __post_init__(self) -> None:
         super().__init__(self.bot, self.binding)
 
@@ -98,5 +98,6 @@ class DnDCog(BoundCog):
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(
-        DnDCog(bot, CONFIGS.cogs.dnd.binding, **CONFIGS.cogs.dnd.kwargs), guilds=[discord.Object(id=CONFIGS.guild_id)]
+        DnDCog(bot, CONFIGS.cogs.dnd.binding, **CONFIGS.cogs.dnd.kwargs),
+        guilds=[discord.Object(id=CONFIGS.guild_id)],
     )

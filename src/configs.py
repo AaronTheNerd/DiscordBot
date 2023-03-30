@@ -9,6 +9,7 @@ class BindingConfig:
     enabled: bool
     channel_id: int = field(default=-1)
 
+
 @dataclass(frozen=True)
 class CogConfig:
     enabled: bool

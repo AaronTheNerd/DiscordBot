@@ -1,10 +1,9 @@
-
 from discord.ext import commands
 
 from configs import BindingConfig
 
+
 class BoundCog(commands.Cog):
-    
     def __init__(self, bot: commands.Bot, binding: BindingConfig):
         self.bot = bot
         self.binding = binding
