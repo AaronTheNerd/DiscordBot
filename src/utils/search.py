@@ -3,8 +3,7 @@ from typing import Dict, List
 from urllib.parse import ParseResult, parse_qsl, urlparse
 
 from configs import CONFIGS
-from utils.spotifyAPI import (AlbumResponse, PlaylistResponse, SpotifyAPI,
-                              TrackResponse)
+from utils.spotifyAPI import AlbumResponse, PlaylistResponse, SpotifyAPI, TrackResponse
 
 
 @dataclass
