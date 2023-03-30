@@ -17,7 +17,7 @@ from utils.error import on_error
 @dataclass
 class RoleOnJoin:
     enabled: bool
-    role: str = field(default="")
+    role_id: int
 
 
 @dataclass
@@ -44,7 +44,7 @@ class EventsCog(commands.Cog):
             return
         if not self.role.enabled:
             return 
-        role = discord.utils.get(ctx.guild.roles, name=self.role.role)
+        role = ctx.guild.get_role(self.role.role_id)
         if role is None:
             return
         await member.add_roles(role)
