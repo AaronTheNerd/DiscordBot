@@ -1,13 +1,13 @@
 import json
 import os
 from dataclasses import dataclass, field, fields, is_dataclass
-from typing import Any, Dict, Type, TypeVar
+from typing import Any, Type, TypeVar
 
 
 @dataclass(frozen=True)
 class CogConfig:
     enabled: bool
-    kwargs: Dict[str, Any] = field(default_factory=dict)
+    kwargs: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -39,7 +39,7 @@ class Configs:
 T = TypeVar("T")
 
 
-def _replaceWithDataclass(raw_configs: Dict[str, Any], cls: Type[T]) -> T:
+def _replaceWithDataclass(raw_configs: dict[str, Any], cls: Type[T]) -> T:
     for field in fields(cls):
         if is_dataclass(field.type):
             raw_configs[field.name] = _replaceWithDataclass(

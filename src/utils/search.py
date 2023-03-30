@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Dict, List
 from urllib.parse import ParseResult, parse_qsl, urlparse
 
 from configs import CONFIGS
@@ -9,13 +8,13 @@ from utils.spotifyAPI import AlbumResponse, PlaylistResponse, SpotifyAPI, TrackR
 @dataclass
 class Search:
     search: str
-    searches: List[str] = field(default_factory=list, init=False)
+    searches: list[str] = field(default_factory=list, init=False)
     playlist: bool = field(default=False, init=False)
     is_url: bool = field(default=False, init=False)
 
     youtube_url: str = field(default="https://www.youtube.com", init=False)
 
-    def set_attrs(self, searches: List[str], playlist: bool, is_url: bool) -> None:
+    def set_attrs(self, searches: list[str], playlist: bool, is_url: bool) -> None:
         self.searches = searches
         self.playlist = playlist
         self.is_url = is_url
@@ -26,7 +25,7 @@ class Search:
             parse_result: ParseResult = urlparse(self.search)
         except Exception:
             return
-        path: List[str] = parse_result.path.split("/")
+        path: list[str] = parse_result.path.split("/")
         if len(path) < 2:
             return
         if parse_result.netloc in ["www.youtube.com", "youtube.com"] or (
@@ -34,14 +33,14 @@ class Search:
             and parse_result.path[0] in ["www.youtube.com", "youtube.com"]
         ):
             if path[1] == "watch":
-                queries: Dict[str, str] = dict(parse_qsl(parse_result.query))
+                queries: dict[str, str] = dict(parse_qsl(parse_result.query))
                 self.set_attrs(
                     [f"{self.youtube_url}/watch?v={queries['v']}"], False, True
                 )
             elif path[1] == "shorts":
                 self.set_attrs([f"{self.youtube_url}/watch?v={path[2]}"], False, True)
             elif path[1] == "playlist":
-                queries: Dict[str, str] = dict(parse_qsl(parse_result.query))
+                queries: dict[str, str] = dict(parse_qsl(parse_result.query))
                 self.set_attrs(
                     [f"{self.youtube_url}/playlist?list={queries['list']}"], True, True
                 )

@@ -1,23 +1,23 @@
-from typing import Any, Dict, List
+from typing import Any
 
 import requests
 
 
 class AlbumResponse:
-    def __init__(self, tracks: Dict[str, Any], *args, **kwargs) -> None:
+    def __init__(self, tracks: dict[str, Any], *args, **kwargs) -> None:
         self.tracks = tracks
 
 
 class TrackResponse:
     def __init__(
-        self, name: str, artists: List[Dict[str, Any]], *args, **kwargs
+        self, name: str, artists: list[dict[str, Any]], *args, **kwargs
     ) -> None:
         self.name = name
         self.artists = artists
 
 
 class PlaylistResponse:
-    def __init__(self, tracks: Dict[str, Any], *args, **kwargs) -> None:
+    def __init__(self, tracks: dict[str, Any], *args, **kwargs) -> None:
         self.tracks = tracks
 
 

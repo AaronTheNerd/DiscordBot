@@ -4,8 +4,8 @@ Written by Aaron Barge
 Copyright 2022
 """
 import random
-from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from dataclasses import dataclass
+from typing import Any
 
 import discord
 from discord.ext import commands
@@ -26,16 +26,16 @@ class RandomInsult:
     delete_after: int
     insult_chance: float
     adjective_chance: float
-    adjectives: List[str]
-    insults: List[str]
+    adjectives: list[str]
+    insults: list[str]
 
 
 class EventsCog(commands.Cog):
     def __init__(
         self,
         bot,
-        role_on_join: Dict[str, Any],
-        random_insult_on_command: Dict[str, Any],
+        role_on_join: dict[str, Any],
+        random_insult_on_command: dict[str, Any],
     ) -> None:
         self.bot = bot
         self.role = RoleOnJoin(**role_on_join)

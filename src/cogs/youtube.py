@@ -103,7 +103,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         search: str,
         source: discord.FFmpegPCMAudio,
         *,
-        data: dict,
+        data: dict[str, Any],
         volume: float = 0.5,
     ) -> None:
         super().__init__(source, volume)
@@ -492,7 +492,9 @@ class VoiceState:
         requester = self.current.source.requester
         channel = self.current.source.channel
         url = Search(self.current.source.search)
-        return Song.create_pending((await YTDLSource.create_source(requester, channel, url))[0])
+        return Song.create_pending(
+            (await YTDLSource.create_source(requester, channel, url))[0]
+        )
 
     def play_next_song(self, error: Optional[Exception] = None) -> None:
         if error:
