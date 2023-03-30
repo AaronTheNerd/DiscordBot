@@ -30,16 +30,21 @@ class Search:
         if len(path) < 2:
             return
         if parse_result.netloc in ["www.youtube.com", "youtube.com"] or (
-            parse_result.netloc == "" and parse_result.path[0] in ["www.youtube.com", "youtube.com"]
+            parse_result.netloc == ""
+            and parse_result.path[0] in ["www.youtube.com", "youtube.com"]
         ):
             if path[1] == "watch":
                 queries: Dict[str, str] = dict(parse_qsl(parse_result.query))
-                self.set_attrs([f"{self.youtube_url}/watch?v={queries['v']}"], False, True)
+                self.set_attrs(
+                    [f"{self.youtube_url}/watch?v={queries['v']}"], False, True
+                )
             elif path[1] == "shorts":
                 self.set_attrs([f"{self.youtube_url}/watch?v={path[2]}"], False, True)
             elif path[1] == "playlist":
                 queries: Dict[str, str] = dict(parse_qsl(parse_result.query))
-                self.set_attrs([f"{self.youtube_url}/playlist?list={queries['list']}"], True, True)
+                self.set_attrs(
+                    [f"{self.youtube_url}/playlist?list={queries['list']}"], True, True
+                )
         elif parse_result.netloc == "youtu.be" or (
             parse_result.netloc == "" and parse_result.path[0] == "youtu.be"
         ):
@@ -51,7 +56,9 @@ class Search:
             if path[1] == "track":
                 t_resp: TrackResponse = api.get_track(path[2])
                 self.set_attrs(
-                    [f"{t_resp.name} by {t_resp.artists[0]['name']} lyrics"], False, False
+                    [f"{t_resp.name} by {t_resp.artists[0]['name']} lyrics"],
+                    False,
+                    False,
                 )
             elif path[1] == "playlist":
                 pl_resp: PlaylistResponse = api.get_playlist(path[2])
@@ -71,7 +78,7 @@ class Search:
                         for track in a_resp.tracks["items"]
                     ],
                     False,
-                    False
+                    False,
                 )
 
 

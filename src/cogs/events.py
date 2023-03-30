@@ -32,18 +32,23 @@ class RandomInsult:
 
 class EventsCog(commands.Cog):
     def __init__(
-        self, bot, role_on_join: Dict[str, Any], random_insult_on_command: Dict[str, Any]
+        self,
+        bot,
+        role_on_join: Dict[str, Any],
+        random_insult_on_command: Dict[str, Any],
     ) -> None:
         self.bot = bot
         self.role = RoleOnJoin(**role_on_join)
         self.insult = RandomInsult(**random_insult_on_command)
 
     @commands.Cog.listener()
-    async def on_member_join(self, ctx: commands.Context, member: discord.Member) -> None:
+    async def on_member_join(
+        self, ctx: commands.Context, member: discord.Member
+    ) -> None:
         if not ctx.guild:
             return
         if not self.role.enabled:
-            return 
+            return
         role = ctx.guild.get_role(self.role.role_id)
         if role is None:
             return
@@ -58,11 +63,14 @@ class EventsCog(commands.Cog):
             insult += random.choice(self.insult.insults)
             await ctx.send(insult, delete_after=self.insult.delete_after)
 
-    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
+    async def cog_command_error(
+        self, ctx: commands.Context, error: commands.CommandError
+    ) -> None:
         await on_error(ctx, error, self.bot)
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(
         EventsCog(bot, **CONFIGS.cogs.events.kwargs),
-        guilds=[discord.Object(id=CONFIGS.guild_id)]
+        guilds=[discord.Object(id=CONFIGS.guild_id)],
     )

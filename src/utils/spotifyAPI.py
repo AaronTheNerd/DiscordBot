@@ -9,7 +9,9 @@ class AlbumResponse:
 
 
 class TrackResponse:
-    def __init__(self, name: str, artists: List[Dict[str, Any]], *args, **kwargs) -> None:
+    def __init__(
+        self, name: str, artists: List[Dict[str, Any]], *args, **kwargs
+    ) -> None:
         self.name = name
         self.artists = artists
 
@@ -24,11 +26,14 @@ class SpotifyAPI:
     base_url: str = "https://api.spotify.com/v1"
 
     def __init__(self, client_id: str, client_secret: str) -> None:
-        token = requests.post(self.auth_url, {
-            "grant_type": "client_credentials",
-            "client_id": client_id,
-            "client_secret": client_secret
-        }).json()["access_token"]
+        token = requests.post(
+            self.auth_url,
+            {
+                "grant_type": "client_credentials",
+                "client_id": client_id,
+                "client_secret": client_secret,
+            },
+        ).json()["access_token"]
         self._headers = {"Authorization": f"Bearer {token}"}
 
     def get_track(self, id: str) -> TrackResponse:
@@ -38,7 +43,9 @@ class SpotifyAPI:
 
     def get_playlist(self, id: str) -> PlaylistResponse:
         return PlaylistResponse(
-            **requests.get(f"{self.base_url}/playlists/{id}", headers=self._headers).json()
+            **requests.get(
+                f"{self.base_url}/playlists/{id}", headers=self._headers
+            ).json()
         )
 
     def get_album(self, id: str) -> AlbumResponse:

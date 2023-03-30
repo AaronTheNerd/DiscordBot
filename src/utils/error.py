@@ -3,6 +3,7 @@ from traceback import TracebackException
 from typing import Optional
 from configs import CONFIGS
 
+
 async def on_error(
     ctx: commands.Context, err: Exception, bot: Optional[commands.Bot]
 ) -> None:

@@ -23,13 +23,14 @@ from discord.ext import commands
 
 from configs import CONFIGS
 
+
 class CustomBot(commands.Bot):
     def __init__(self) -> None:
         super().__init__(
             command_prefix=CONFIGS.command_prefix,
             intents=discord.Intents.all(),
             application_id=CONFIGS.app_id,
-            case_insensitive=CONFIGS.case_insensitive
+            case_insensitive=CONFIGS.case_insensitive,
         )
 
     async def setup_hook(self) -> None:
@@ -49,6 +50,7 @@ class CustomBot(commands.Bot):
 
     async def on_ready(self) -> None:
         print(f"{self.user} has logged in")
+
 
 bot = CustomBot()
 bot.run(CONFIGS.token)

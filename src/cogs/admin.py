@@ -6,6 +6,7 @@ Copyright 2022
 from discord.ext import commands
 from utils.error import on_error
 
+
 class AdminCog(commands.Cog, name="AdminsOnly"):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -17,5 +18,7 @@ class AdminCog(commands.Cog, name="AdminsOnly"):
             await vc.disconnect()
         await self.bot.logout()
 
-    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
+    async def cog_command_error(
+        self, ctx: commands.Context, error: commands.CommandError
+    ) -> None:
         await on_error(ctx, error, self.bot)

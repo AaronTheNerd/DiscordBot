@@ -20,14 +20,17 @@ DICE_CHOICES = [
     Choice(name="d10", value=10),
     Choice(name="d12", value=12),
     Choice(name="d20", value=20),
-    Choice(name="d100", value=100)
+    Choice(name="d100", value=100),
 ]
+
 
 class DnDCog(commands.Cog):
     def __init__(self) -> None:
         pass
 
-    async def _roll(self, interaction: discord.Interaction, sides: int, rolls: int = 1) -> None:
+    async def _roll(
+        self, interaction: discord.Interaction, sides: int, rolls: int = 1
+    ) -> None:
         all_rolls = []
         for _ in range(rolls):
             all_rolls.append(random.randint(1, sides))
@@ -38,81 +41,56 @@ class DnDCog(commands.Cog):
             return
         await interaction.response.send_message(total_str)
 
-    @app_commands.command(
-        name="d4",
-        description="Rolls some D4."
-    )
+    @app_commands.command(name="d4", description="Rolls some D4.")
     async def _d4(self, interaction: discord.Interaction, rolls: int = 1) -> None:
         await self._roll(interaction, 4, rolls)
 
-    @app_commands.command(
-        name="d6",
-        description="Rolls some D6."
-    )
+    @app_commands.command(name="d6", description="Rolls some D6.")
     async def _d6(self, interaction: discord.Interaction, rolls: int = 1) -> None:
         await self._roll(interaction, 6, rolls)
 
-    @app_commands.command(
-        name="d8",
-        description="Rolls some D8."
-    )
+    @app_commands.command(name="d8", description="Rolls some D8.")
     async def _d8(self, interaction: discord.Interaction, rolls: int = 1) -> None:
         await self._roll(interaction, 8, rolls)
 
-    @app_commands.command(
-        name="d10",
-        description="Rolls some D10."
-    )
+    @app_commands.command(name="d10", description="Rolls some D10.")
     async def _d10(self, interaction: discord.Interaction, rolls: int = 1) -> None:
         await self._roll(interaction, 10, rolls)
 
-    @app_commands.command(
-        name="d12",
-        description="Rolls some D12."
-    )
+    @app_commands.command(name="d12", description="Rolls some D12.")
     async def _d12(self, interaction: discord.Interaction, rolls: int = 1) -> None:
         await self._roll(interaction, 12, rolls)
 
-    @app_commands.command(
-        name="d20",
-        description="Rolls some D20."
-    )
+    @app_commands.command(name="d20", description="Rolls some D20.")
     async def _d20(self, interaction: discord.Interaction, rolls: int = 1) -> None:
         await self._roll(interaction, 20, rolls)
 
-    @app_commands.command(
-        name="d100",
-        description="Rolls some D100."
-    )
+    @app_commands.command(name="d100", description="Rolls some D100.")
     async def _d100(self, interaction: discord.Interaction, rolls: int = 1) -> None:
         await self._roll(interaction, 100, rolls)
 
-    @app_commands.command(
-        name="rolladv",
-        description="Rolls with advantage."
-    )
-    @app_commands.choices(sides = DICE_CHOICES)
+    @app_commands.command(name="rolladv", description="Rolls with advantage.")
+    @app_commands.choices(sides=DICE_CHOICES)
     async def _rolladv(self, interaction: discord.Interaction, sides: int) -> None:
         roll1, roll2 = random.randint(1, sides), random.randint(1, sides)
         roll = roll1 if roll1 > roll2 else roll2
         await interaction.response.send_message(f"Rolled with Advantage: {roll}")
 
-    @app_commands.command(
-        name="rolldis",
-        description="Rolls with advantage."
-    )
-    @app_commands.choices(sides = DICE_CHOICES)
+    @app_commands.command(name="rolldis", description="Rolls with advantage.")
+    @app_commands.choices(sides=DICE_CHOICES)
     async def _rolldis(self, interaction: discord.Interaction, sides: int) -> None:
         """Rolls with disadvantage."""
         roll1, roll2 = random.randint(1, sides), random.randint(1, sides)
         roll = roll1 if roll1 < roll2 else roll2
         await interaction.response.send_message(f"Rolled with Disadvantage: {roll}")
 
-    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
+    async def cog_command_error(
+        self, ctx: commands.Context, error: commands.CommandError
+    ) -> None:
         await on_error(ctx, error, None)
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(
-        DnDCog(**CONFIGS.cogs.dnd.kwargs),
-        guilds=[discord.Object(id=CONFIGS.guild_id)]
+        DnDCog(**CONFIGS.cogs.dnd.kwargs), guilds=[discord.Object(id=CONFIGS.guild_id)]
     )

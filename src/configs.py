@@ -42,7 +42,9 @@ T = TypeVar("T")
 def _replaceWithDataclass(raw_configs: Dict[str, Any], cls: Type[T]) -> T:
     for field in fields(cls):
         if is_dataclass(field.type):
-            raw_configs[field.name] = _replaceWithDataclass(raw_configs[field.name], field.type)
+            raw_configs[field.name] = _replaceWithDataclass(
+                raw_configs[field.name], field.type
+            )
     return cls(**raw_configs)
 
 

@@ -163,11 +163,15 @@ class YTDLSource(discord.PCMVolumeTransformer):
                             process_info = entry
                             break
                     if process_info is None:
-                        raise YTDLError(f"Couldn't find anything that matches `{search}`")
+                        raise YTDLError(
+                            f"Couldn't find anything that matches `{search}`"
+                        )
                 webpage_url = process_info["webpage_url"]
             else:
                 webpage_url = search
-            partial = functools.partial(cls.ytdl.extract_info, webpage_url, download=False)
+            partial = functools.partial(
+                cls.ytdl.extract_info, webpage_url, download=False
+            )
             processed_info = await loop.run_in_executor(None, partial)
             if processed_info is None:
                 raise YTDLError(f"Couldn't fetch `{webpage_url}`")
@@ -179,10 +183,20 @@ class YTDLSource(discord.PCMVolumeTransformer):
                     try:
                         info = processed_info["entries"].pop(0)
                     except IndexError:
-                        raise YTDLError(f"Couldn't retrieve any matches for `{webpage_url}`")
-            return cls(ctx, search, discord.FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS), data=info)
+                        raise YTDLError(
+                            f"Couldn't retrieve any matches for `{webpage_url}`"
+                        )
+            return cls(
+                ctx,
+                search,
+                discord.FFmpegPCMAudio(info["url"], **cls.FFMPEG_OPTIONS),
+                data=info,
+            )
 
-        return [FutureYTDLSource(search, func(search, loop, _search.is_url)) for search in _search.searches]
+        return [
+            FutureYTDLSource(search, func(search, loop, _search.is_url))
+            for search in _search.searches
+        ]
 
     @classmethod
     async def create_source_playlist(
@@ -194,7 +208,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
     ) -> list[FutureYTDLSource]:
         search = _search.searches[0]
         loop = loop or asyncio.get_event_loop()
-        partial = functools.partial(cls.ytdl.extract_info, search, download=False, process=False)
+        partial = functools.partial(
+            cls.ytdl.extract_info, search, download=False, process=False
+        )
         data = await loop.run_in_executor(None, partial)
 
         if data is None:
@@ -213,7 +229,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
         for entry in entries:
             try:
                 coroutines += await cls.create_source(
-                    ctx, Search(f"https://www.youtube.com/watch?v={entry['url']}"), loop=loop
+                    ctx,
+                    Search(f"https://www.youtube.com/watch?v={entry['url']}"),
+                    loop=loop,
                 )
             except:
                 pass
@@ -235,11 +253,12 @@ class YTDLSource(discord.PCMVolumeTransformer):
             duration_list.append(f"{seconds} seconds")
         return ", ".join(duration_list)
 
+
 @dataclass
 class FutureYTDLSource:
     raw_search: str
     future: Awaitable[YTDLSource]
-        
+
 
 @dataclass(slots=True)
 class Song:
@@ -256,7 +275,9 @@ class Song:
 
         return FutureSong(source.raw_search, func(source))
 
-    def create_embed(self, loop: bool = False, loopqueue: bool = False) -> discord.Embed:
+    def create_embed(
+        self, loop: bool = False, loopqueue: bool = False
+    ) -> discord.Embed:
         embed = (
             discord.Embed(
                 title="Now playing",
@@ -266,7 +287,8 @@ class Song:
             .add_field(name="Duration", value=self.source.duration_str)
             .add_field(name="Requested by", value=self.requester.mention)
             .add_field(
-                name="Uploader", value=f"[{self.source.uploader}]({self.source.uploader_url})"
+                name="Uploader",
+                value=f"[{self.source.uploader}]({self.source.uploader_url})",
             )
             .add_field(name="URL", value=f"[Click]({self.source.url})")
             .add_field(name="Loop", value=f'{"✅" if loop else "❌"}')
@@ -278,6 +300,7 @@ class Song:
     def __str__(self) -> str:
         return f"[**{self.source.title}**]({self.source.url})"
 
+
 @dataclass
 class FutureSong:
     raw_search: str
@@ -285,6 +308,7 @@ class FutureSong:
 
     def __str__(self) -> str:
         return f"'{self.raw_search}'"
+
 
 @dataclass
 class SongQueue(asyncio.Queue):
@@ -300,7 +324,7 @@ class SongQueue(asyncio.Queue):
 
     def __getitem__(self, item) -> Song | FutureSong | list[Song | FutureSong]:
         if isinstance(item, slice):
-            return list(itertools.islice(self._queue, item.start, item.stop, item.step)) 
+            return list(itertools.islice(self._queue, item.start, item.stop, item.step))
         else:
             return self._queue[item]
 
@@ -320,24 +344,24 @@ class SongQueue(asyncio.Queue):
             if type(result) is FutureSong:
                 result = await result.future
         self.songs_modified.set()
-        return result # type: ignore
+        return result  # type: ignore
 
     def clear(self) -> None:
-        self._queue.clear() 
+        self._queue.clear()
 
     def shuffle(self) -> None:
-        random.shuffle(self._queue) 
+        random.shuffle(self._queue)
         self.songs_modified.set()
 
     def remove(self, index: int) -> None:
-        del self._queue[index] 
+        del self._queue[index]
         self.songs_modified.set()
 
     def move(self, index_from: int, index_to: int) -> None:
-        self._queue.insert(index_to, self._queue[index_from]) 
+        self._queue.insert(index_to, self._queue[index_from])
         if index_to < index_from:
             index_from += 1
-        del self._queue[index_from] 
+        del self._queue[index_from]
         self.songs_modified.set()
 
     async def lazy_load_task(self) -> None:
@@ -347,24 +371,25 @@ class SongQueue(asyncio.Queue):
             has_awaitable = False
             async with self.lock:
                 if self.max_lazy_load < len(
-                    list(filter(lambda x: type(x) is not FutureSong, self._queue)) 
+                    list(filter(lambda x: type(x) is not FutureSong, self._queue))
                 ):
                     self.songs_modified.clear()
                     continue
-                for index, song in enumerate(self._queue): 
+                for index, song in enumerate(self._queue):
                     if index >= self.lazy_load:
                         break
                     if type(song) is FutureSong:
                         try:
-                            self._queue[index] = await song.future 
+                            self._queue[index] = await song.future
                         except Exception:
-                            del self._queue[index] 
+                            del self._queue[index]
                             break
                         else:
                             has_awaitable = True
                             break
             if not has_awaitable:
                 self.songs_modified.clear()
+
 
 @dataclass
 class VoiceState:
@@ -428,7 +453,9 @@ class VoiceState:
                         await self.songs.put(remade_current)
                 self.current = None
                 try:
-                    await asyncio.wait_for(self.get_new_current(), self.cog.disconnect_timeout)
+                    await asyncio.wait_for(
+                        self.get_new_current(), self.cog.disconnect_timeout
+                    )
                 except asyncio.TimeoutError:
                     self.bot.loop.create_task(self.disconnect())
                     return
@@ -449,13 +476,15 @@ class VoiceState:
                     msg = await self.current.source.channel.send(embed=embed)
                 await self.bot.change_presence(
                     activity=discord.Activity(
-                        type=discord.ActivityType.listening, name=self.current.source.title
+                        type=discord.ActivityType.listening,
+                        name=self.current.source.title,
                     )
                 )
                 await self.next.wait()
 
     async def remake_current(self) -> FutureSong | None:
-        if self.current is None: return
+        if self.current is None:
+            return
         ctx = self.current.source.ctx
         url = Search(self.current.source.search)
         return Song.create_pending((await YTDLSource.create_source(ctx, url))[0])
@@ -511,25 +540,36 @@ class Music(commands.Cog):
         self.delete_queue: int = delete_queue
 
     def cog_unload(self) -> None:
-        if self.voice_state is None: return
+        if self.voice_state is None:
+            return
         self.bot.loop.create_task(self.voice_state.stop())
 
     def cog_check(self, ctx: commands.Context) -> bool:
         if not ctx.guild:
-            raise commands.NoPrivateMessage("This command can't be used in DM channels.")
+            raise commands.NoPrivateMessage(
+                "This command can't be used in DM channels."
+            )
         return True
 
     async def cog_before_invoke(self, ctx: commands.Context) -> None:
         if self.voice_state is None:
             self.voice_state = VoiceState(self.bot, self, ctx)
 
-    async def cog_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
+    async def cog_command_error(
+        self, ctx: commands.Context, error: commands.CommandError
+    ) -> None:
         await on_error(ctx, error, self.bot)
 
     @commands.command(name="join", aliases=["summon"], invoke_without_subcommand=True)
     async def _join(self, ctx: commands.Context) -> None:
         """Joins a voice channel."""
-        if self.voice_state is None or type(ctx.author) is discord.User or ctx.author.voice is None or ctx.author.voice.channel is None: return
+        if (
+            self.voice_state is None
+            or type(ctx.author) is discord.User
+            or ctx.author.voice is None
+            or ctx.author.voice.channel is None
+        ):
+            return
         destination = ctx.author.voice.channel
         if self.voice_state is not None and self.voice_state.voice is not None:
             await self.voice_state.voice.move_to(destination)
@@ -551,7 +591,8 @@ class Music(commands.Cog):
     @commands.command(name="nowplaying", aliases=["np"])
     async def _now(self, ctx: commands.Context) -> None:
         """Displays the currently playing song."""
-        if self.voice_state is None: return
+        if self.voice_state is None:
+            return
         if self.voice_state.current is not None:
             await ctx.send(embed=self.voice_state.now_playing_embed())
         else:
@@ -560,8 +601,10 @@ class Music(commands.Cog):
     @commands.command(name="pause", aliases=["stop"])
     async def _pause(self, ctx: commands.Context) -> None:
         """Pauses the currently playing song."""
-        if self.voice_state is None: return
-        if self.voice_state.voice is None: return
+        if self.voice_state is None:
+            return
+        if self.voice_state.voice is None:
+            return
         if self.voice_state.is_playing and self.voice_state.voice.is_playing():
             self.voice_state.voice.pause()
             if ctx.message is not None:
@@ -570,8 +613,12 @@ class Music(commands.Cog):
     @commands.command(name="resume", aliases=["re", "res", "continue"])
     async def _resume(self, ctx: commands.Context) -> None:
         """Resumes a currently paused song."""
-        if self.voice_state is None or self.voice_state.voice is None: return
-        if self.voice_state.is_playing is not None and self.voice_state.voice.is_paused():
+        if self.voice_state is None or self.voice_state.voice is None:
+            return
+        if (
+            self.voice_state.is_playing is not None
+            and self.voice_state.voice.is_paused()
+        ):
             self.voice_state.voice.resume()
             if ctx.message is not None:
                 await ctx.message.add_reaction("⏯")
@@ -579,8 +626,10 @@ class Music(commands.Cog):
     @commands.command(name="clear", aliases=["cl"])
     async def _stop(self, ctx: commands.Context) -> None:
         """Stops playing song and clears the queue."""
-        if self.voice_state is None: return
-        if self.voice_state.voice is None: return
+        if self.voice_state is None:
+            return
+        if self.voice_state.voice is None:
+            return
         self.voice_state.songs.clear()
         if self.voice_state.is_playing:
             self.voice_state.voice.stop()
@@ -591,7 +640,8 @@ class Music(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def _skip(self, ctx: commands.Context) -> None:
         """Skips a song without vote."""
-        if self.voice_state is None: return
+        if self.voice_state is None:
+            return
         if not self.voice_state.is_playing:
             await ctx.send("Not playing any music right now...")
             return
@@ -605,7 +655,9 @@ class Music(commands.Cog):
     ) -> discord.Embed:
         description = ""
         for member in members:
-            description += f'{"✅" if member.id in skip_votes else "❌"}   {member.mention}\n'
+            description += (
+                f'{"✅" if member.id in skip_votes else "❌"}   {member.mention}\n'
+            )
         embed = discord.Embed(
             title="Voting Status",
             description=description,
@@ -621,14 +673,18 @@ class Music(commands.Cog):
 
         The requestor can skip the current song without a vote.
         """
-        if self.voice_state is None: return
+        if self.voice_state is None:
+            return
         if not self.voice_state.is_playing:
             await ctx.send("Not playing any music right now...")
             return
 
         voter = ctx.author
         ids_in_vc = list(ctx.author.voice.channel.voice_states.keys())
-        if self.voteskip.requester_autoskip and voter == self.voice_state.current.requester:
+        if (
+            self.voteskip.requester_autoskip
+            and voter == self.voice_state.current.requester
+        ):
             if ctx.message is not None:
                 await ctx.message.add_reaction("⏭")
             self.voice_state.skip()
@@ -636,9 +692,14 @@ class Music(commands.Cog):
             self.voice_state.skip_votes.add(voter.id)
             total_votes = len(self.voice_state.skip_votes)
             if ctx.author.voice is None or voter.id in ids_in_vc:
-                raise commands.CommandError("You are not connected to any voice channel.")
+                raise commands.CommandError(
+                    "You are not connected to any voice channel."
+                )
             members = list(
-                filter(lambda x: x is not None and not x.bot, map(ctx.guild.get_member, ids_in_vc))
+                filter(
+                    lambda x: x is not None and not x.bot,
+                    map(ctx.guild.get_member, ids_in_vc),
+                )
             )
             if self.voteskip.exclude_idle:
                 members = [member for member in members if member.status != "idle"]
@@ -649,7 +710,9 @@ class Music(commands.Cog):
                 self.voice_state.skip()
             else:
                 await ctx.send(
-                    embed=self.voteskip_embed(members, self.voice_state.skip_votes, votes_needed),
+                    embed=self.voteskip_embed(
+                        members, self.voice_state.skip_votes, votes_needed
+                    ),
                     delete_after=60 * 10,
                 )
         else:
@@ -661,7 +724,8 @@ class Music(commands.Cog):
 
         You can optionally specify the page to show. Each page contains 10 elements.
         """
-        if self.voice_state is None: return
+        if self.voice_state is None:
+            return
 
         if len(self.voice_state.songs) == 0:
             await ctx.send("Empty queue.")
@@ -681,7 +745,8 @@ class Music(commands.Cog):
     @commands.command(name="shuffle", aliases=["random"])
     async def _shuffle(self, ctx: commands.Context) -> None:
         """Shuffles the queue."""
-        if self.voice_state is None: return
+        if self.voice_state is None:
+            return
 
         if len(self.voice_state.songs) == 0:
             raise commands.CommandError("Empty queue.")
@@ -692,7 +757,8 @@ class Music(commands.Cog):
     @commands.command(name="remove", aliases=["rm"])
     async def _remove(self, ctx: commands.Context, index: int) -> None:
         """Removes a song from the queue at a given index."""
-        if self.voice_state is None: return
+        if self.voice_state is None:
+            return
 
         if len(self.voice_state.songs) == 0:
             raise commands.CommandError("Empty queue.")
@@ -703,7 +769,8 @@ class Music(commands.Cog):
     @commands.command(name="loop")
     async def _loop(self, ctx: commands.Context) -> None:
         """Toggle whether to loop the currently playing song."""
-        if self.voice_state is None: return
+        if self.voice_state is None:
+            return
 
         if not self.voice_state.is_playing:
             raise commands.CommandError("Nothing being played at the moment.")
@@ -715,7 +782,8 @@ class Music(commands.Cog):
     @commands.command(name="loopqueue", aliases=["lq"])
     async def _loopqueue(self, ctx: commands.Context) -> None:
         """Toggle whether to loop the queue."""
-        if self.voice_state is None: return
+        if self.voice_state is None:
+            return
 
         if not self.voice_state.is_playing:
             raise commands.CommandError("Nothing being played at the moment.")
@@ -734,8 +802,9 @@ class Music(commands.Cog):
         This command automatically searches from various sites if no URL is provided.
         A list of these sites can be found here: https://rg3.github.io/youtube-dl/supportedsites.html
         """
-        if self.voice_state is None: return
-        
+        if self.voice_state is None:
+            return
+
         if not self.voice_state.voice:
             await ctx.invoke(self._join)
         async with ctx.typing():
@@ -746,9 +815,13 @@ class Music(commands.Cog):
                         ctx, _search, loop=self.bot.loop
                     )
                 else:
-                    futures = await YTDLSource.create_source(ctx, _search, loop=self.bot.loop)
+                    futures = await YTDLSource.create_source(
+                        ctx, _search, loop=self.bot.loop
+                    )
             except Exception as e:
-                raise commands.CommandError(f"An error occurred while processing this request: {str(e)}")
+                raise commands.CommandError(
+                    f"An error occurred while processing this request: {str(e)}"
+                )
             else:
                 for future in futures:
                     song = Song.create_pending(future)
@@ -758,7 +831,8 @@ class Music(commands.Cog):
     @commands.command(name="move", aliases=["m", "mv"])
     async def _move(self, ctx: commands.Context, index_from: int, index_to: int):
         """Moves a song from the queue at a given index to a given index."""
-        if self.voice_state is None: return
+        if self.voice_state is None:
+            return
         if index_to != index_from:
             self.voice_state.songs.move(index_from - 1, index_to - 1)
         if ctx.message is not None:
@@ -773,8 +847,9 @@ class Music(commands.Cog):
             if ctx.voice_client.channel != ctx.author.voice.channel:
                 raise commands.CommandError("Bot is already in a voice channel.")
 
+
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(
         Music(bot, **CONFIGS.cogs.youtube.kwargs),
-        guilds=[discord.Object(id=CONFIGS.guild_id)]
+        guilds=[discord.Object(id=CONFIGS.guild_id)],
     )
