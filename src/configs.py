@@ -89,6 +89,12 @@ class Configs:
     spotify: SpotifyAuthConfigs
     cogs: AvailableCogs
 
+    def dump(self) -> None:
+        abs_path = os.path.abspath(os.path.dirname(__file__))
+        json_content = _getJson(self)
+        with open(f"{abs_path}/../config.json", "w") as json_file:
+            json.dump(json_content, json_file, indent=4)
+
 
 T = TypeVar("T")
 
@@ -100,6 +106,18 @@ def _replaceWithDataclass(raw_configs: dict[str, Any], cls: Type[T]) -> T:
                 raw_configs[field.name], field.type
             )
     return cls(**raw_configs)
+
+
+def _getJson(configs: T) -> dict[str, Any]:
+    content = {}
+    if not is_dataclass(configs): return {}
+    for field in fields(configs):
+        value = getattr(configs, field.name)
+        if is_dataclass(field.type):
+            content[field.name] = _getJson(value)
+        else:
+            content[field.name] = value
+    return content
 
 
 def _getConfigs() -> Configs:
@@ -115,3 +133,7 @@ CONFIGS = _getConfigs()
 
 if __name__ == "__main__":
     print(CONFIGS)
+    CONFIGS.case_insensitive = True
+    CONFIGS.command_prefix = "!"
+    CONFIGS.cogs.youtube.enabled = True
+    CONFIGS.dump()
