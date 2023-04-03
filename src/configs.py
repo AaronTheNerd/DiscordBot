@@ -110,7 +110,8 @@ def _replaceWithDataclass(raw_configs: dict[str, Any], cls: Type[T]) -> T:
 
 def _getJson(configs: T) -> dict[str, Any]:
     content = {}
-    if not is_dataclass(configs): return {}
+    if not is_dataclass(configs):
+        return {}
     for field in fields(configs):
         value = getattr(configs, field.name)
         if is_dataclass(field.type):
