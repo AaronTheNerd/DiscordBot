@@ -12,7 +12,7 @@ from discord.app_commands import Choice
 from discord.ext import commands
 
 from cog import BoundCog
-from configs import CONFIGS, BindingConfig
+from configs import CONFIGS, DnDConfig
 from utils.error import on_error
 
 DICE_CHOICES = [
@@ -29,10 +29,10 @@ DICE_CHOICES = [
 @dataclass
 class DnDCog(BoundCog):
     bot: commands.Bot
-    binding: BindingConfig
+    configs: DnDConfig
 
     def __post_init__(self) -> None:
-        super().__init__(self.bot, self.binding)
+        super().__init__(self.bot, self.configs.binding)
 
     async def _roll(
         self, interaction: discord.Interaction, sides: int, rolls: int = 1
@@ -98,6 +98,6 @@ class DnDCog(BoundCog):
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(
-        DnDCog(bot, CONFIGS.cogs.dnd.binding, **CONFIGS.cogs.dnd.kwargs),
+        DnDCog(bot, CONFIGS.cogs.dnd),
         guilds=[discord.Object(id=CONFIGS.guild_id)],
     )

@@ -11,39 +11,17 @@ import discord
 from discord.ext import commands
 
 from cog import BoundCog
-from configs import CONFIGS, BindingConfig
+from configs import CONFIGS, EventsConfig
 from utils.error import on_error
-
-
-@dataclass
-class RoleOnJoin:
-    enabled: bool
-    role_id: int
-
-
-@dataclass
-class RandomInsult:
-    enabled: bool
-    delete_after: int
-    insult_chance: float
-    adjective_chance: float
-    adjectives: list[str]
-    insults: list[str]
 
 
 @dataclass
 class EventsCog(BoundCog):
     bot: commands.Bot
-    binding: BindingConfig
-    role_on_join: dict[str, Any]
-    random_insult_on_command: dict[str, Any]
-    parsed_role: RoleOnJoin = field(init=False)
-    parsed_insult: RandomInsult = field(init=False)
+    configs: EventsConfig
 
     def __post_init__(self) -> None:
-        super().__init__(self.bot, self.binding)
-        self.parsed_role = RoleOnJoin(**self.role_on_join)
-        self.parsed_insult = RandomInsult(**self.random_insult_on_command)
+        super().__init__(self.bot, self.configs.binding)
 
     @commands.Cog.listener()
     async def on_member_join(
@@ -51,9 +29,9 @@ class EventsCog(BoundCog):
     ) -> None:
         if not ctx.guild:
             return
-        if not self.parsed_role.enabled:
+        if not self.configs.role_on_join.enabled:
             return
-        role = ctx.guild.get_role(self.parsed_role.role_id)
+        role = ctx.guild.get_role(self.configs.role_on_join.role_id)
         if role is None:
             return
         await member.add_roles(role)
@@ -61,14 +39,14 @@ class EventsCog(BoundCog):
     @commands.Cog.listener()
     async def on_command(self, ctx: commands.Context) -> None:
         if (
-            self.parsed_insult.enabled
-            and random.random() < self.parsed_insult.insult_chance
+            self.configs.random_insult_on_command.enabled
+            and random.random() < self.configs.random_insult_on_command.insult_chance
         ):
             insult = f"You're a "
-            if random.random() < self.parsed_insult.adjective_chance:
-                insult += random.choice(self.parsed_insult.adjectives) + ", "
-            insult += random.choice(self.parsed_insult.insults)
-            await ctx.send(insult, delete_after=self.parsed_insult.delete_after)
+            if random.random() < self.configs.random_insult_on_command.adjective_chance:
+                insult += random.choice(self.configs.random_insult_on_command.adjectives) + ", "
+            insult += random.choice(self.configs.random_insult_on_command.insults)
+            await ctx.send(insult, delete_after=self.configs.random_insult_on_command.delete_after)
 
     async def cog_command_error(
         self, ctx: commands.Context, error: commands.CommandError
@@ -78,6 +56,6 @@ class EventsCog(BoundCog):
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(
-        EventsCog(bot, CONFIGS.cogs.events.binding, **CONFIGS.cogs.events.kwargs),
+        EventsCog(bot, CONFIGS.cogs.events),
         guilds=[discord.Object(id=CONFIGS.guild_id)],
     )

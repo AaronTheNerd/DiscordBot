@@ -4,34 +4,81 @@ from dataclasses import dataclass, field, fields, is_dataclass
 from typing import Any, Type, TypeVar
 
 
-@dataclass(frozen=True)
+@dataclass
 class BindingConfig:
     enabled: bool
     channel_id: int = field(default=-1)
 
 
-@dataclass(frozen=True)
-class CogConfig:
+@dataclass
+class DnDConfig:
     enabled: bool
     binding: BindingConfig
-    kwargs: dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass(frozen=True)
+@dataclass
+class RoleOnJoin:
+    enabled: bool
+    role_id: int
+
+
+@dataclass
+class RandomInsult:
+    enabled: bool
+    delete_after: int
+    insult_chance: float
+    adjective_chance: float
+    adjectives: list[str]
+    insults: list[str]
+
+
+@dataclass
+class EventsConfig:
+    enabled: bool
+    binding: BindingConfig
+    role_on_join: RoleOnJoin
+    random_insult_on_command: RandomInsult
+
+
+@dataclass
+class MiscConfig:
+    enabled: bool
+    binding: BindingConfig
+
+
+@dataclass
+class VoteSkipConfigs:
+    exclude_idle: bool
+    requester_autoskip: bool
+    fraction: float
+
+
+@dataclass
+class YoutubeConfig:
+    enabled: bool
+    binding: BindingConfig
+    voteskip: VoteSkipConfigs
+    disconnect_timeout: int
+    lazy_load: int
+    max_lazy_load: int
+    delete_queue: int
+
+
+@dataclass
 class AvailableCogs:
-    dnd: CogConfig
-    events: CogConfig
-    misc: CogConfig
-    youtube: CogConfig
+    dnd: DnDConfig
+    events: EventsConfig
+    misc: MiscConfig
+    youtube: YoutubeConfig
 
 
-@dataclass(frozen=True)
+@dataclass
 class SpotifyAuthConfigs:
     client_id: str
     client_secret: str = field(repr=False)
 
 
-@dataclass(frozen=True)
+@dataclass
 class Configs:
     token: str = field(repr=False)
     app_id: int = field(repr=False)

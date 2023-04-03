@@ -57,7 +57,7 @@ import youtube_dl
 from discord.ext import commands
 
 from cog import BoundCog
-from configs import CONFIGS, BindingConfig
+from configs import CONFIGS, YoutubeConfig
 from utils.error import on_error
 from utils.search import Search
 
@@ -351,6 +351,9 @@ class SongQueue(asyncio.Queue):
         self.songs_modified.set()
         return result  # type: ignore
 
+    def slice(self, start, stop, step=1) -> list[Song | FutureSong]:
+        return list(itertools.islice(self._queue, start, stop, step))
+
     def clear(self) -> None:
         self._queue.clear()
 
@@ -416,7 +419,7 @@ class VoiceState:
     skip_votes: set = field(default_factory=set)
 
     def __post_init__(self) -> None:
-        self.songs = SongQueue(self.cog.lazy_load, self.cog.max_lazy_load)
+        self.songs = SongQueue(self.cog.configs.lazy_load, self.cog.configs.max_lazy_load)
         self.audio_player = self.bot.loop.create_task(self.audio_player_task())
         self.lazy_loader = self.bot.loop.create_task(self.songs.lazy_load_task())
 
@@ -459,7 +462,7 @@ class VoiceState:
                 self.current = None
                 try:
                     await asyncio.wait_for(
-                        self.get_new_current(), self.cog.disconnect_timeout
+                        self.get_new_current(), self.cog.configs.disconnect_timeout
                     )
                 except asyncio.TimeoutError:
                     self.bot.loop.create_task(self.disconnect())
@@ -523,27 +526,13 @@ class VoiceState:
 
 
 @dataclass
-class VoteSkipConfigs:
-    exclude_idle: bool
-    requester_autoskip: bool
-    fraction: float
-
-
-@dataclass
 class Music(BoundCog):
     bot: commands.Bot
-    binding: BindingConfig
-    voteskip: dict[str, Any]
-    disconnect_timeout: int
-    lazy_load: int
-    max_lazy_load: int
-    delete_queue: int
+    configs: YoutubeConfig
     voice_state: Optional[VoiceState] = None
-    parsed_voteskip: VoteSkipConfigs = field(init=False)
 
     def __post_init__(self) -> None:
-        super().__init__(self.bot, self.binding)
-        self.parsed_voteskip: VoteSkipConfigs = VoteSkipConfigs(**self.voteskip)
+        super().__init__(self.bot, self.configs.binding)
 
     def cog_unload(self) -> None:
         if self.voice_state is None:
@@ -572,7 +561,7 @@ class Music(BoundCog):
         """Joins a voice channel."""
         if (
             self.voice_state is None
-            or type(ctx.author) is discord.User
+            or isinstance(ctx.author, discord.User)
             or ctx.author.voice is None
             or ctx.author.voice.channel is None
         ):
@@ -680,7 +669,7 @@ class Music(BoundCog):
 
         The requestor can skip the current song without a vote.
         """
-        if self.voice_state is None:
+        if self.voice_state is None or ctx.guild is None or isinstance(ctx.author, discord.User) or ctx.author.voice is None or ctx.author.voice.channel is None:
             return
         if not self.voice_state.is_playing:
             await ctx.send("Not playing any music right now...")
@@ -689,7 +678,8 @@ class Music(BoundCog):
         voter = ctx.author
         ids_in_vc = list(ctx.author.voice.channel.voice_states.keys())
         if (
-            self.parsed_voteskip.requester_autoskip
+            self.configs.voteskip.requester_autoskip
+            and self.voice_state.current is not None
             and voter == self.voice_state.current.requester
         ):
             if ctx.message is not None:
@@ -698,19 +688,16 @@ class Music(BoundCog):
         elif voter.id not in self.voice_state.skip_votes:
             self.voice_state.skip_votes.add(voter.id)
             total_votes = len(self.voice_state.skip_votes)
-            if ctx.author.voice is None or voter.id in ids_in_vc:
+            if isinstance(ctx.author, discord.User) or ctx.author.voice is None or voter.id not in ids_in_vc:
                 raise commands.CommandError(
                     "You are not connected to any voice channel."
                 )
-            members = list(
-                filter(
-                    lambda x: x is not None and not x.bot,
-                    map(ctx.guild.get_member, ids_in_vc),
-                )
-            )
-            if self.parsed_voteskip.exclude_idle:
+            members = [
+                member for id in ids_in_vc if (member := ctx.guild.get_member(id)) and member is not None and not member.bot
+            ]
+            if self.configs.voteskip.exclude_idle:
                 members = [member for member in members if member.status != "idle"]
-            votes_needed = math.ceil(self.parsed_voteskip.fraction * len(members))
+            votes_needed = math.ceil(self.configs.voteskip.fraction * len(members))
             if total_votes >= votes_needed:
                 if ctx.message is not None:
                     await ctx.message.add_reaction("⏭")
@@ -742,12 +729,12 @@ class Music(BoundCog):
         start = (page - 1) * items_per_page
         end = start + items_per_page
         queue = ""
-        for i, song in enumerate(self.voice_state.songs[start:end], start=start):
+        for i, song in enumerate(self.voice_state.songs.slice(start, end), start=start):
             queue += f"`{i + 1}.` {song}\n"
         embed = discord.Embed(
             description=f"**{len(self.voice_state.songs)} tracks:**\n\n{queue}"
         ).set_footer(text=f"Viewing page {page}/{pages}")
-        await ctx.send(embed=embed, delete_after=self.delete_queue)
+        await ctx.send(embed=embed, delete_after=self.configs.delete_queue)
 
     @commands.command(name="shuffle", aliases=["random"])
     async def _shuffle(self, ctx: commands.Context) -> None:
@@ -848,6 +835,7 @@ class Music(BoundCog):
     @_join.before_invoke
     @_play.before_invoke
     async def ensure_voice_state(self, ctx: commands.Context) -> None:
+        if isinstance(ctx.author, discord.User): return
         if not ctx.author.voice or not ctx.author.voice.channel:
             raise commands.CommandError("You are not connected to any voice channel.")
         if ctx.voice_client:
@@ -857,6 +845,6 @@ class Music(BoundCog):
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(
-        Music(bot, CONFIGS.cogs.youtube.binding, **CONFIGS.cogs.youtube.kwargs),
+        Music(bot, CONFIGS.cogs.youtube),
         guilds=[discord.Object(id=CONFIGS.guild_id)],
     )
