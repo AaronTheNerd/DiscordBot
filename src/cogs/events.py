@@ -44,9 +44,14 @@ class EventsCog(BoundCog):
         ):
             insult = f"You're a "
             if random.random() < self.configs.random_insult_on_command.adjective_chance:
-                insult += random.choice(self.configs.random_insult_on_command.adjectives) + ", "
+                insult += (
+                    random.choice(self.configs.random_insult_on_command.adjectives)
+                    + ", "
+                )
             insult += random.choice(self.configs.random_insult_on_command.insults)
-            await ctx.send(insult, delete_after=self.configs.random_insult_on_command.delete_after)
+            await ctx.send(
+                insult, delete_after=self.configs.random_insult_on_command.delete_after
+            )
 
     async def cog_command_error(
         self, ctx: commands.Context, error: commands.CommandError

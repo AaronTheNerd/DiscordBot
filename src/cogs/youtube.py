@@ -419,7 +419,9 @@ class VoiceState:
     skip_votes: set = field(default_factory=set)
 
     def __post_init__(self) -> None:
-        self.songs = SongQueue(self.cog.configs.lazy_load, self.cog.configs.max_lazy_load)
+        self.songs = SongQueue(
+            self.cog.configs.lazy_load, self.cog.configs.max_lazy_load
+        )
         self.audio_player = self.bot.loop.create_task(self.audio_player_task())
         self.lazy_loader = self.bot.loop.create_task(self.songs.lazy_load_task())
 
@@ -669,7 +671,13 @@ class Music(BoundCog):
 
         The requestor can skip the current song without a vote.
         """
-        if self.voice_state is None or ctx.guild is None or isinstance(ctx.author, discord.User) or ctx.author.voice is None or ctx.author.voice.channel is None:
+        if (
+            self.voice_state is None
+            or ctx.guild is None
+            or isinstance(ctx.author, discord.User)
+            or ctx.author.voice is None
+            or ctx.author.voice.channel is None
+        ):
             return
         if not self.voice_state.is_playing:
             await ctx.send("Not playing any music right now...")
@@ -688,12 +696,20 @@ class Music(BoundCog):
         elif voter.id not in self.voice_state.skip_votes:
             self.voice_state.skip_votes.add(voter.id)
             total_votes = len(self.voice_state.skip_votes)
-            if isinstance(ctx.author, discord.User) or ctx.author.voice is None or voter.id not in ids_in_vc:
+            if (
+                isinstance(ctx.author, discord.User)
+                or ctx.author.voice is None
+                or voter.id not in ids_in_vc
+            ):
                 raise commands.CommandError(
                     "You are not connected to any voice channel."
                 )
             members = [
-                member for id in ids_in_vc if (member := ctx.guild.get_member(id)) and member is not None and not member.bot
+                member
+                for id in ids_in_vc
+                if (member := ctx.guild.get_member(id))
+                and member is not None
+                and not member.bot
             ]
             if self.configs.voteskip.exclude_idle:
                 members = [member for member in members if member.status != "idle"]
@@ -835,7 +851,8 @@ class Music(BoundCog):
     @_join.before_invoke
     @_play.before_invoke
     async def ensure_voice_state(self, ctx: commands.Context) -> None:
-        if isinstance(ctx.author, discord.User): return
+        if isinstance(ctx.author, discord.User):
+            return
         if not ctx.author.voice or not ctx.author.voice.channel:
             raise commands.CommandError("You are not connected to any voice channel.")
         if ctx.voice_client:
