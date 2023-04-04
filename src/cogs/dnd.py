@@ -13,7 +13,6 @@ from discord.ext import commands
 
 from cog import BoundCog
 from configs import CONFIGS, DnDConfig
-from utils.error import on_error
 
 DICE_CHOICES = [
     Choice(name="d4", value=4),
@@ -89,11 +88,6 @@ class DnDCog(BoundCog):
         roll1, roll2 = random.randint(1, sides), random.randint(1, sides)
         roll = roll1 if roll1 < roll2 else roll2
         await interaction.response.send_message(f"Rolled with Disadvantage: {roll}")
-
-    async def cog_command_error(
-        self, ctx: commands.Context, error: commands.CommandError
-    ) -> None:
-        await on_error(ctx, error, None)
 
 
 async def setup(bot: commands.Bot) -> None:

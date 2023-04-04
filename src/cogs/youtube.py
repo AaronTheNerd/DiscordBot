@@ -58,7 +58,6 @@ from discord.ext import commands
 
 from cog import BoundCog
 from configs import CONFIGS, YoutubeConfig
-from utils.error import on_error
 from utils.search import Search
 
 # Silence useless bug reports messages
@@ -552,11 +551,6 @@ class Music(BoundCog):
         await super().cog_before_invoke(ctx)
         if self.voice_state is None:
             self.voice_state = VoiceState(self.bot, self, ctx)
-
-    async def cog_command_error(
-        self, ctx: commands.Context, error: commands.CommandError
-    ) -> None:
-        await on_error(ctx, error, self.bot)
 
     @commands.command(name="join", aliases=["summon"], invoke_without_subcommand=True)
     async def _join(self, ctx: commands.Context) -> None:

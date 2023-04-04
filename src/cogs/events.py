@@ -4,15 +4,13 @@ Written by Aaron Barge
 Copyright 2022
 """
 import random
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
 import discord
 from discord.ext import commands
 
 from cog import BoundCog
 from configs import CONFIGS, EventsConfig
-from utils.error import on_error
 
 
 @dataclass
@@ -52,11 +50,6 @@ class EventsCog(BoundCog):
             await ctx.send(
                 insult, delete_after=self.configs.random_insult_on_command.delete_after
             )
-
-    async def cog_command_error(
-        self, ctx: commands.Context, error: commands.CommandError
-    ) -> None:
-        await on_error(ctx, error, self.bot)
 
 
 async def setup(bot: commands.Bot) -> None:

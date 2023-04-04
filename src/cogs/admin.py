@@ -1,19 +1,19 @@
-"""A module for the miscellaneous cog of the bot.
+"""A module for the administrative cog of the bot.
 
 Written by Aaron Barge
-Copyright 2022
+Copyright 2023
 """
 import discord
-import randfacts
 from discord import app_commands
 from discord.ext import commands
 
 from cog import BoundCog
-from configs import CONFIGS, MiscConfig
+from configs import CONFIGS, AdminConfig
+from utils.error import on_error
 
 
-class MiscCog(BoundCog):
-    def __init__(self, bot: commands.Bot, configs: MiscConfig) -> None:
+class AdminCog(BoundCog):
+    def __init__(self, bot: commands.Bot, configs: AdminConfig) -> None:
         super().__init__(bot, configs.binding)
 
     @app_commands.command(name="hello", description="Hello World!")
@@ -30,9 +30,14 @@ class MiscCog(BoundCog):
     async def _ping(self, interaction: discord.Interaction) -> None:
         await interaction.response.pong()
 
+    async def cog_command_error(
+        self, ctx: commands.Context, error: commands.CommandError
+    ) -> None:
+        await on_error(ctx, error, self.bot)
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(
-        MiscCog(bot, CONFIGS.cogs.misc),
+        AdminCog(bot, CONFIGS.cogs.admin),
         guilds=[discord.Object(id=CONFIGS.guild_id)],
     )
