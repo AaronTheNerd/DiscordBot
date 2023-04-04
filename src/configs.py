@@ -7,11 +7,14 @@ from typing import Any, Type, TypeVar
 def custom_setters(cls):
     for field in fields(cls):
         if not is_dataclass(field.type):
+
             def wrapper(fld):
                 def setter(self, value) -> None:
                     self.__dict__[fld.name] = value
                     CONFIGS.dump()
+
                 return setter
+
             setattr(cls, f"set_{field.name}", wrapper(field))
     return cls
 
