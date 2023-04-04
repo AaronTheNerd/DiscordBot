@@ -4,24 +4,40 @@ from dataclasses import dataclass, field, fields, is_dataclass
 from typing import Any, Type, TypeVar
 
 
+def custom_setters(cls):
+    for field in fields(cls):
+        if not is_dataclass(field.type):
+            def wrapper(fld):
+                def setter(self, value) -> None:
+                    self.__dict__[fld.name] = value
+                    CONFIGS.dump()
+                return setter
+            setattr(cls, f"set_{field.name}", wrapper(field))
+    return cls
+
+
+@custom_setters
 @dataclass
 class BindingConfig:
     enabled: bool
     channel_id: int = field(default=-1)
 
 
+@custom_setters
 @dataclass
 class DnDConfig:
     enabled: bool
     binding: BindingConfig
 
 
+@custom_setters
 @dataclass
 class RoleOnJoin:
     enabled: bool
     role_id: int
 
 
+@custom_setters
 @dataclass
 class RandomInsult:
     enabled: bool
@@ -32,6 +48,7 @@ class RandomInsult:
     insults: list[str]
 
 
+@custom_setters
 @dataclass
 class EventsConfig:
     enabled: bool
@@ -40,12 +57,14 @@ class EventsConfig:
     random_insult_on_command: RandomInsult
 
 
+@custom_setters
 @dataclass
 class MiscConfig:
     enabled: bool
     binding: BindingConfig
 
 
+@custom_setters
 @dataclass
 class VoteSkipConfigs:
     exclude_idle: bool
@@ -53,6 +72,7 @@ class VoteSkipConfigs:
     fraction: float
 
 
+@custom_setters
 @dataclass
 class YoutubeConfig:
     enabled: bool
@@ -64,6 +84,7 @@ class YoutubeConfig:
     delete_queue: int
 
 
+@custom_setters
 @dataclass
 class AvailableCogs:
     dnd: DnDConfig
@@ -72,12 +93,14 @@ class AvailableCogs:
     youtube: YoutubeConfig
 
 
+@custom_setters
 @dataclass
 class SpotifyAuthConfigs:
     client_id: str
     client_secret: str = field(repr=False)
 
 
+@custom_setters
 @dataclass
 class Configs:
     token: str = field(repr=False)
@@ -92,7 +115,7 @@ class Configs:
     def dump(self) -> None:
         abs_path = os.path.abspath(os.path.dirname(__file__))
         json_content = _getJson(self)
-        with open(f"{abs_path}/../config.json", "w") as json_file:
+        with open(f"{abs_path}/../config.json", "w+") as json_file:
             json.dump(json_content, json_file, indent=4)
 
 
@@ -108,7 +131,7 @@ def _replaceWithDataclass(raw_configs: dict[str, Any], cls: Type[T]) -> T:
     return cls(**raw_configs)
 
 
-def _getJson(configs: T) -> dict[str, Any]:
+def _getJson(configs) -> dict[str, Any]:
     content = {}
     if not is_dataclass(configs):
         return {}
@@ -134,7 +157,6 @@ CONFIGS = _getConfigs()
 
 if __name__ == "__main__":
     print(CONFIGS)
-    CONFIGS.case_insensitive = True
-    CONFIGS.command_prefix = "!"
-    CONFIGS.cogs.youtube.enabled = True
-    CONFIGS.dump()
+    CONFIGS.set_case_insensitive(False)
+    CONFIGS.set_command_prefix("/")
+    CONFIGS.cogs.youtube.set_enabled(False)
