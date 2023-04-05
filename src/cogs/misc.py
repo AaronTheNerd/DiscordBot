@@ -18,7 +18,7 @@ from configs import CONFIGS, MiscConfig
 class MiscCog(BoundCog):
     bot: commands.Bot
     configs: MiscConfig
-    
+
     def __post_init__(self) -> None:
         super().__init__(self.bot, self.configs.binding)
 
