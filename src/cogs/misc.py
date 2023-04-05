@@ -3,6 +3,8 @@
 Written by Aaron Barge
 Copyright 2022
 """
+from dataclasses import dataclass
+
 import discord
 import randfacts
 from discord import app_commands
@@ -12,9 +14,13 @@ from cog import BoundCog
 from configs import CONFIGS, MiscConfig
 
 
+@dataclass
 class MiscCog(BoundCog):
-    def __init__(self, bot: commands.Bot, configs: MiscConfig) -> None:
-        super().__init__(bot, configs.binding)
+    bot: commands.Bot
+    configs: MiscConfig
+    
+    def __post_init__(self) -> None:
+        super().__init__(self.bot, self.configs.binding)
 
     @app_commands.command(name="hello", description="Hello World!")
     async def _hello(self, interaction: discord.Interaction) -> None:
