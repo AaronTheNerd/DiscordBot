@@ -166,11 +166,15 @@ class YTDLSource(discord.PCMVolumeTransformer):
                             process_info = entry
                             break
                     if process_info is None:
-                        raise YTDLError(f"Couldn't find anything that matches `{search}`")
+                        raise YTDLError(
+                            f"Couldn't find anything that matches `{search}`"
+                        )
                 webpage_url = process_info["webpage_url"]
             else:
                 webpage_url = search
-            partial = functools.partial(cls.ytdl.extract_info, webpage_url, download=False)
+            partial = functools.partial(
+                cls.ytdl.extract_info, webpage_url, download=False
+            )
             processed_info = await loop.run_in_executor(None, partial)
             if processed_info is None:
                 raise YTDLError(f"Couldn't fetch `{webpage_url}`")
@@ -182,7 +186,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
                     try:
                         info = processed_info["entries"].pop(0)
                     except IndexError:
-                        raise YTDLError(f"Couldn't retrieve any matches for `{webpage_url}`")
+                        raise YTDLError(
+                            f"Couldn't retrieve any matches for `{webpage_url}`"
+                        )
             return cls(
                 requester,
                 channel,
@@ -207,7 +213,9 @@ class YTDLSource(discord.PCMVolumeTransformer):
     ) -> list[FutureYTDLSource]:
         search = _search.searches[0]
         loop = loop or asyncio.get_event_loop()
-        partial = functools.partial(cls.ytdl.extract_info, search, download=False, process=False)
+        partial = functools.partial(
+            cls.ytdl.extract_info, search, download=False, process=False
+        )
         data = await loop.run_in_executor(None, partial)
 
         if data is None:
@@ -273,7 +281,9 @@ class Song:
 
         return FutureSong(source.raw_search, func(source))
 
-    def create_embed(self, loop: bool = False, loopqueue: bool = False) -> discord.Embed:
+    def create_embed(
+        self, loop: bool = False, loopqueue: bool = False
+    ) -> discord.Embed:
         embed = (
             discord.Embed(
                 title="Now playing",
@@ -410,7 +420,9 @@ class VoiceState:
     skip_votes: set = field(default_factory=set)
 
     def __post_init__(self) -> None:
-        self.songs = SongQueue(self.cog.configs.lazy_load, self.cog.configs.max_lazy_load)
+        self.songs = SongQueue(
+            self.cog.configs.lazy_load, self.cog.configs.max_lazy_load
+        )
         self.audio_player = self.bot.loop.create_task(self.audio_player_task())
         self.lazy_loader = self.bot.loop.create_task(self.songs.lazy_load_task())
 
@@ -487,7 +499,9 @@ class VoiceState:
         requester = self.current.source.requester
         channel = self.current.source.channel
         url = Search(self.current.source.search)
-        return Song.create_pending((await YTDLSource.create_source(requester, channel, url))[0])
+        return Song.create_pending(
+            (await YTDLSource.create_source(requester, channel, url))[0]
+        )
 
     def play_next_song(self, error: Optional[Exception] = None) -> None:
         if error:
@@ -520,7 +534,9 @@ def called_in_server(interaction: discord.Interaction) -> bool:
 
 def ensure_voice_state(func: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(func)
-    async def wrapper(self: Music, interaction: discord.Interaction, *args, **kwargs) -> None:
+    async def wrapper(
+        self: Music, interaction: discord.Interaction, *args, **kwargs
+    ) -> None:
         if (
             isinstance(interaction.user, discord.User)
             or not interaction.user.voice
@@ -537,9 +553,13 @@ def ensure_voice_state(func: Callable[..., Any]) -> Callable[..., Any]:
 
 def music_before_invoke(func: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(func)
-    async def wrapper(self: Music, interaction: discord.Interaction, *args, **kwargs) -> None:
+    async def wrapper(
+        self: Music, interaction: discord.Interaction, *args, **kwargs
+    ) -> None:
         if self.voice_state is None:
-            self.voice_state = VoiceState(self.bot, self, interaction.user.voice.channel)
+            self.voice_state = VoiceState(
+                self.bot, self, interaction.user.voice.channel
+            )
         await func(self, interaction, *args, **kwargs)
 
     return wrapper
@@ -592,14 +612,20 @@ class Music(BoundCog):
     )
     @app_commands.check(called_in_server)
     @music_before_invoke
-    async def _leave(self, interaction: discord.Interaction, silent: bool = False) -> None:
+    async def _leave(
+        self, interaction: discord.Interaction, silent: bool = False
+    ) -> None:
         if not self.voice_state or not self.voice_state.voice:
-            await interaction.response.send_message("Not connected to any voice channel.", ephemeral=silent)
+            await interaction.response.send_message(
+                "Not connected to any voice channel.", ephemeral=silent
+            )
             return
         await self.leave()
         await interaction.response.send_message("Goodbye!", ephemeral=silent)
 
-    @app_commands.command(name="nowplaying", description="Displays the currently playing song.")
+    @app_commands.command(
+        name="nowplaying", description="Displays the currently playing song."
+    )
     @app_commands.check(called_in_server)
     @music_before_invoke
     async def _now(self, interaction: discord.Interaction) -> None:
@@ -611,7 +637,9 @@ class Music(BoundCog):
         else:
             await interaction.response.send_message("Nothing playing at the moment.")
 
-    @app_commands.command(name="pause", description="Pauses the currently playing song.")
+    @app_commands.command(
+        name="pause", description="Pauses the currently playing song."
+    )
     @app_commands.check(called_in_server)
     @music_before_invoke
     async def _pause(self, interaction: discord.Interaction) -> None:
@@ -629,11 +657,16 @@ class Music(BoundCog):
     async def _resume(self, interaction: discord.Interaction) -> None:
         if self.voice_state is None or self.voice_state.voice is None:
             return
-        if self.voice_state.is_playing is not None and self.voice_state.voice.is_paused():
+        if (
+            self.voice_state.is_playing is not None
+            and self.voice_state.voice.is_paused()
+        ):
             self.voice_state.voice.resume()
             await interaction.response.send_message("Resumed!")
 
-    @app_commands.command(name="clear", description="Stops playing song and clears the queue.")
+    @app_commands.command(
+        name="clear", description="Stops playing song and clears the queue."
+    )
     @app_commands.check(called_in_server)
     @music_before_invoke
     async def _stop(self, interaction: discord.Interaction) -> None:
@@ -652,7 +685,9 @@ class Music(BoundCog):
         if self.voice_state is None:
             return
         if not self.voice_state.is_playing:
-            await interaction.response.send_message("Not playing any music right now...")
+            await interaction.response.send_message(
+                "Not playing any music right now..."
+            )
             return
         self.voice_state.skip()
         await interaction.response.send_message("Skipped!")
@@ -663,7 +698,9 @@ class Music(BoundCog):
     ) -> discord.Embed:
         description = ""
         for member in members:
-            description += f'{"✅" if member.id in skip_votes else "❌"}   {member.mention}\n'
+            description += (
+                f'{"✅" if member.id in skip_votes else "❌"}   {member.mention}\n'
+            )
         embed = discord.Embed(
             title="Voting Status",
             description=description,
@@ -693,7 +730,9 @@ class Music(BoundCog):
             return
 
         if not self.voice_state.is_playing:
-            await interaction.response.send_message("Not playing any music right now...")
+            await interaction.response.send_message(
+                "Not playing any music right now..."
+            )
             return
 
         voter = interaction.user
@@ -727,12 +766,16 @@ class Music(BoundCog):
                 await interaction.response.send_message("Skipped!")
             else:
                 await interaction.response.send_message(
-                    embed=self.voteskip_embed(members, self.voice_state.skip_votes, votes_needed),
+                    embed=self.voteskip_embed(
+                        members, self.voice_state.skip_votes, votes_needed
+                    ),
                     delete_after=60 * 10,
                 )
 
         else:
-            await interaction.response.send_message("You have already voted to skip this song.")
+            await interaction.response.send_message(
+                "You have already voted to skip this song."
+            )
 
     async def get_queue_embed(self, page: int = 1) -> Optional[discord.Embed]:
         if self.voice_state is None or len(self.voice_state.songs) == 0:
@@ -789,7 +832,9 @@ class Music(BoundCog):
         if len(self.voice_state.songs) == 0:
             raise commands.CommandError("Empty queue.")
         self.voice_state.songs.remove(index - 1)
-        await interaction.response.send_message(f"Removed the song at position {index} from the queue.")
+        await interaction.response.send_message(
+            f"Removed the song at position {index} from the queue."
+        )
 
     @app_commands.command(name="loop")
     @app_commands.check(called_in_server)
@@ -803,9 +848,13 @@ class Music(BoundCog):
             raise commands.CommandError("Nothing being played at the moment.")
         # Inverse boolean value to loop and unloop.
         self.voice_state.loop = not self.voice_state.loop
-        await interaction.response.send_message(f"{'Began' if self.voice_state.loop else 'Stopped'} looping.")
+        await interaction.response.send_message(
+            f"{'Began' if self.voice_state.loop else 'Stopped'} looping."
+        )
 
-    @app_commands.command(name="loopqueue", description="Toggle whether to loop the queue.")
+    @app_commands.command(
+        name="loopqueue", description="Toggle whether to loop the queue."
+    )
     @app_commands.check(called_in_server)
     @music_before_invoke
     async def _loopqueue(self, interaction: discord.Interaction) -> None:
@@ -816,7 +865,9 @@ class Music(BoundCog):
             raise commands.CommandError("Nothing being played at the moment.")
         # Inverse boolean value to loop and unloop.
         self.voice_state.loopqueue = not self.voice_state.loopqueue
-        await interaction.response.send_message(f"{'Began' if self.voice_state.loopqueue else 'Stopped'} looping the queue.")
+        await interaction.response.send_message(
+            f"{'Began' if self.voice_state.loopqueue else 'Stopped'} looping the queue."
+        )
 
     @app_commands.command(name="play", description="""Plays a song.""")
     @app_commands.check(called_in_server)
@@ -853,21 +904,24 @@ class Music(BoundCog):
                 song = Song.create_pending(future)
                 await self.voice_state.songs.put(song)
             embed = await self.get_queue_embed()
-            await interaction.response.send_message(
-                embed=embed
-            )
+            await interaction.response.send_message(embed=embed)
 
     @app_commands.command(
-        name="move", description="Moves a song from the queue at a given index to a given index."
+        name="move",
+        description="Moves a song from the queue at a given index to a given index.",
     )
     @app_commands.check(called_in_server)
     @music_before_invoke
-    async def _move(self, interaction: discord.Interaction, index_from: int, index_to: int):
+    async def _move(
+        self, interaction: discord.Interaction, index_from: int, index_to: int
+    ):
         if self.voice_state is None:
             return
         if index_to != index_from:
             self.voice_state.songs.move(index_from - 1, index_to - 1)
-        await interaction.response.send_message(f"Moved song at position {index_from} to {index_to}")
+        await interaction.response.send_message(
+            f"Moved song at position {index_from} to {index_to}"
+        )
 
 
 async def setup(bot: commands.Bot) -> None:
