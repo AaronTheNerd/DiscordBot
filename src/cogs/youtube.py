@@ -403,7 +403,7 @@ class SongQueue(asyncio.Queue):
 @dataclass
 class VoiceState:
     bot: commands.Bot
-    cog: Music
+    cog: MusicCog
     channel: discord.VoiceChannel
 
     songs: SongQueue = field(init=False)
@@ -535,7 +535,7 @@ def called_in_server(interaction: discord.Interaction) -> bool:
 def ensure_voice_state(func: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(func)
     async def wrapper(
-        self: Music, interaction: discord.Interaction, *args, **kwargs
+        self: MusicCog, interaction: discord.Interaction, *args, **kwargs
     ) -> None:
         if (
             isinstance(interaction.user, discord.User)
@@ -554,7 +554,7 @@ def ensure_voice_state(func: Callable[..., Any]) -> Callable[..., Any]:
 def music_before_invoke(func: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(func)
     async def wrapper(
-        self: Music, interaction: discord.Interaction, *args, **kwargs
+        self: MusicCog, interaction: discord.Interaction, *args, **kwargs
     ) -> None:
         if self.voice_state is None:
             self.voice_state = VoiceState(
@@ -566,7 +566,7 @@ def music_before_invoke(func: Callable[..., Any]) -> Callable[..., Any]:
 
 
 @dataclass
-class Music(BoundCog):
+class MusicCog(BoundCog):
     bot: commands.Bot
     configs: YoutubeConfig
     voice_state: Optional[VoiceState] = None
@@ -926,6 +926,6 @@ class Music(BoundCog):
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(
-        Music(bot, CONFIGS.cogs.youtube),
+        MusicCog(bot, CONFIGS.cogs.youtube),
         guilds=[discord.Object(id=CONFIGS.guild_id)],
     )
