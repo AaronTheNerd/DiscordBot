@@ -12,6 +12,7 @@ pynacl = "*"
 "discord.py" = {version = "==2.2.2", extras = ["voice"]}
 requests = "*"
 black = "*"
+discord-pretty-help = "*"
 
 [dev-packages]
 

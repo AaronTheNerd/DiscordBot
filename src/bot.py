@@ -31,7 +31,9 @@ class CustomBot(commands.Bot):
             intents=discord.Intents.all(),
             application_id=CONFIGS.app_id,
             case_insensitive=CONFIGS.case_insensitive,
+            help_command=None,
         )
+        self.remove_command("help")
 
     async def setup_hook(self) -> None:
         if CONFIGS.cogs.misc.enabled:
