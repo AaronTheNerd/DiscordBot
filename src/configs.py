@@ -89,19 +89,11 @@ class YoutubeConfig:
 
 @custom_setters
 @dataclass
-class HelpConfig:
-    enabled: bool
-    binding: BindingConfig
-
-
-@custom_setters
-@dataclass
 class AvailableCogs:
     dnd: DnDConfig
     events: EventsConfig
     misc: MiscConfig
     youtube: YoutubeConfig
-    help: HelpConfig
 
 
 @custom_setters
