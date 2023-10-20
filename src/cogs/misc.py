@@ -4,6 +4,7 @@ Written by Aaron Barge
 Copyright 2022
 """
 from dataclasses import dataclass
+import random
 
 import discord
 import randfacts
@@ -12,6 +13,8 @@ from discord.ext import commands
 
 from cog import BoundCog
 from configs import CONFIGS, MiscConfig
+
+import pokebase as pb
 
 
 @dataclass
@@ -35,6 +38,24 @@ class MiscCog(BoundCog):
     @app_commands.command(name="ping", description="Ping!")
     async def _ping(self, interaction: discord.Interaction) -> None:
         await interaction.response.pong()
+
+    @app_commands.command(name="pokemon", description="Generates a random pokemon")
+    async def _pokemon(self, interaction: discord.Interaction) -> None:
+        max_id = 1017
+        await interaction.response.send_message("Searching...")
+        pokemons = []
+        for _ in range(3):
+            pokemon_id = random.randint(1, max_id)
+            pokemon = pb.pokemon(pokemon_id)
+            pokemons.append(pokemon.name)
+        content = f"""Searching... COMPLETE
+
+Here are your options:
+- {pokemons[0]}
+- {pokemons[1]}
+- {pokemons[2]}
+"""
+        await interaction.edit_original_response(content=content)
 
 
 async def setup(bot: commands.Bot) -> None:
