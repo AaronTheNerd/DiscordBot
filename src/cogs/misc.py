@@ -52,7 +52,12 @@ class MiscCog(BoundCog):
 
 Here are your options:
 """
-        embeds = [discord.Embed(title=f"#{pokemon.id}: {pokemon.name}", color=discord.Color.blurple()).set_image(url=pokemon.sprites.front_default) for pokemon in pokemons]
+        embeds = [
+            discord.Embed(
+                title=f"#{pokemon.id}: {pokemon.name}", color=discord.Color.blurple()
+            ).set_image(url=pokemon.sprites.front_default)
+            for pokemon in pokemons
+        ]
         await interaction.edit_original_response(content=content, embeds=embeds)
 
 
