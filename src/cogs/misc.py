@@ -47,15 +47,13 @@ class MiscCog(BoundCog):
         for _ in range(3):
             pokemon_id = random.randint(1, max_id)
             pokemon = pb.pokemon(pokemon_id)
-            pokemons.append(pokemon.name)
+            pokemons.append(pokemon)
         content = f"""Searching... COMPLETE
 
 Here are your options:
-- {pokemons[0]}
-- {pokemons[1]}
-- {pokemons[2]}
 """
-        await interaction.edit_original_response(content=content)
+        embeds = [discord.Embed(title=f"#{pokemon.id}: {pokemon.name}", color=discord.Color.blurple()).set_image(url=pokemon.sprites.front_default) for pokemon in pokemons]
+        await interaction.edit_original_response(content=content, embeds=embeds)
 
 
 async def setup(bot: commands.Bot) -> None:
