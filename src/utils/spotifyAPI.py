@@ -41,12 +41,16 @@ class SpotifyAPI:
             **requests.get(f"{self.base_url}/tracks/{id}", headers=self._headers).json()
         )
 
-    def get_playlist(self, id: str) -> PlaylistResponse:
-        return PlaylistResponse(
-            **requests.get(
-                f"{self.base_url}/playlists/{id}", headers=self._headers
-            ).json()
-        )
+    def get_playlist(self, id: str, next: str = None) -> PlaylistResponse:
+        url = f"{self.base_url}/playlists/{id}"
+        is_next_search = False
+        if next != None:
+            url = next
+            is_next_search = True
+        raw_response = requests.get(url, headers=self._headers).json()
+        if (is_next_search):
+            return PlaylistResponse(raw_response)
+        return PlaylistResponse(**raw_response)
 
     def get_album(self, id: str) -> AlbumResponse:
         return AlbumResponse(

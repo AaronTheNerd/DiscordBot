@@ -874,6 +874,7 @@ class MusicCog(BoundCog):
     @music_before_invoke
     @ensure_voice_state
     async def _play(self, interaction: discord.Interaction, *, search: str) -> None:
+        await interaction.response.send_message("Searching...")
         if self.voice_state is None:
             return
         if not self.voice_state.voice:
@@ -904,7 +905,7 @@ class MusicCog(BoundCog):
                 song = Song.create_pending(future)
                 await self.voice_state.songs.put(song)
             embed = await self.get_queue_embed()
-            await interaction.response.send_message(embed=embed)
+            await interaction.edit_original_response(content=f"Found {len(futures)} song(s)", embed=embed)
 
     @app_commands.command(
         name="move",

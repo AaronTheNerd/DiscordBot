@@ -61,11 +61,19 @@ class Search:
                 )
             elif path[1] == "playlist":
                 pl_resp: PlaylistResponse = api.get_playlist(path[2])
+                clean_track = (
+                    lambda track: f"{track['track']['name']} by {track['track']['artists'][0]['name']} lyrics"
+                )
+                tracks = [clean_track(track) for track in pl_resp.tracks["items"]]
+                next_search = pl_resp.tracks.get("next")
+                while next_search != None:
+                    pl_resp = api.get_playlist(path[2], next_search)
+                    tracks.extend(
+                        [clean_track(track) for track in pl_resp.tracks["items"]]
+                    )
+                    next_search = pl_resp.tracks.get("next")
                 self.set_attrs(
-                    [
-                        f"{track['track']['name']} by {track['track']['artists'][0]['name']} lyrics"
-                        for track in pl_resp.tracks["items"]
-                    ],
+                    tracks,
                     False,
                     False,
                 )
