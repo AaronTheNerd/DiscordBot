@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 randfacts = "*"
-youtube-dl = {git = "https://github.com/ytdl-org/youtube-dl.git"}
+youtube-dl = {git = "https://github.com/ytdl-org/ytdl-nightly.git"}
 httpx = "*"
 beautifulsoup4 = "*"
 pynacl = "*"
